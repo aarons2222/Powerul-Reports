@@ -99,3 +99,39 @@ enum RatingValue: String, CaseIterable {
         }
     }
 }
+
+
+
+
+
+
+enum TimeFilter: String, Codable, CaseIterable {
+    case last30Days = "30days"
+    case last3Months = "3months"
+    case last6Months = "6months"
+    case last12Months = "12months"
+    
+    var title: String {
+        switch self {
+        case .last30Days: "30 Days"
+        case .last3Months: "3 Months"
+        case .last6Months: "6 Months"
+        case .last12Months: "12 Months"
+        }
+    }
+    
+    var date: Date {
+        let calendar = Calendar.current
+        let now = Date()
+        switch self {
+        case .last30Days:
+            return calendar.date(byAdding: .day, value: -30, to: now)!
+        case .last3Months:
+            return calendar.date(byAdding: .month, value: -3, to: now)!
+        case .last6Months:
+            return calendar.date(byAdding: .month, value: -6, to: now)!
+        case .last12Months:
+            return calendar.date(byAdding: .month, value: -12, to: now)!
+        }
+    }
+}

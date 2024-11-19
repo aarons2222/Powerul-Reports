@@ -15,7 +15,7 @@ struct InspectorProfile: Identifiable {
     let grades: [String: Int]
 }
 
-struct MostInspections: View {
+struct AllInspectors: View {
     let reports: [Report]
     
     private func getInspectorProfile(name: String) -> InspectorProfile {
@@ -87,16 +87,11 @@ struct MostInspections: View {
             }
  
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    HStack {
-                        Image(systemName: "person.crop.badge.magnifyingglass")
-                            .font(.title2)
-                            .foregroundColor(.blue)
-                        Text("Most Inspections")
-                            .font(.title3)
-                        Spacer()
-                    }
-                }
+                ToolbarTitleView(
+                    icon: "person.crop.badge.magnifyingglass",
+                    title: "Most Inspections",
+                    iconColor: .blue
+                )
             }
         }
     }

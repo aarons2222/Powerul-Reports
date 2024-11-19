@@ -38,37 +38,7 @@ struct HomeView: View {
     @AppStorage("selectedTimeFilter") private var selectedTimeFilter: TimeFilter = .last30Days
 
     
-    enum TimeFilter: String, Codable, CaseIterable {
-        case last30Days = "30days"
-        case last3Months = "3months"
-        case last6Months = "6months"
-        case last12Months = "12months"
-        
-        var title: String {
-            switch self {
-            case .last30Days: "30 Days"
-            case .last3Months: "3 Months"
-            case .last6Months: "6 Months"
-            case .last12Months: "12 Months"
-            }
-        }
-        
-        var date: Date {
-            let calendar = Calendar.current
-            let now = Date()
-            switch self {
-            case .last30Days:
-                return calendar.date(byAdding: .day, value: -30, to: now)!
-            case .last3Months:
-                return calendar.date(byAdding: .month, value: -3, to: now)!
-            case .last6Months:
-                return calendar.date(byAdding: .month, value: -6, to: now)!
-            case .last12Months:
-                return calendar.date(byAdding: .month, value: -12, to: now)!
-            }
-        }
-    }
-    
+
     var filteredReports: [Report] {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "dd/MM/yyyy"
@@ -145,19 +115,40 @@ struct HomeView: View {
                 
                 // Use filteredReports instead of viewModel.reports for all your cards
                 HStack {
-                    TotalReportsCard(
-                        title: "Reports",
-                        value: "\(filteredReports.count)",
-                        icon: "append.page.rtl",
-                        color: .green
-                    )
+                    
+                    
+                    NavigationLink {
+                        AllReportsView(reports: viewModel.reports)
+                            .toolbarRole(.editor)
+                            .navigationTransition(.zoom(sourceID: filteredReports.first?.id, in: hero))
+                        
+                        
+                    } label: {
+                        TotalReportsCard(
+                            title: "Reports",
+                            value: "\(filteredReports.count)",
+                            icon: "text.page",
+                            color: .blue
+                        )
+                        .padding(5)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .matchedTransitionSource(id: filteredReports.first?.id, in: hero)
+                  
+                    
+                    
+                    
+                    
+                    
+                    
                     
                     TotalReportsCard(
                         title: "Reports",
                         value: "\(filteredReports.count)",
                         icon: "append.page.rtl",
-                        color: .green
+                        color: .blue
                     )
+                    .padding(5)
                 }
                 
                 
@@ -165,27 +156,39 @@ struct HomeView: View {
                 
        
                     NavigationLink {
-                        MostInspections(reports: viewModel.reports)
+                        AllInspectors(reports: viewModel.reports)
                             .toolbarRole(.editor)
-                            .navigationTransition(.zoom(sourceID: filteredReports.first?.id, in: hero))
+                            .navigationTransition(.zoom(sourceID: filteredReports.first?.inspector, in: hero))
                         
                         
                     } label: {
                         TopInspectorsCard(reports: filteredReports)
+                            .padding(5)
                     }
                     .buttonStyle(PlainButtonStyle())
-                    .matchedTransitionSource(id: filteredReports.first?.id, in: hero)
+                    .matchedTransitionSource(id: filteredReports.first?.inspector, in: hero)
                
                 
                 
                 
                 
                 
+                NavigationLink {
+                    AllAreas(reports: viewModel.reports)
+                        .toolbarRole(.editor)
+                        .navigationTransition(.zoom(sourceID: filteredReports.first?.localAuthority, in: hero))
+                    
+                    
+                } label: {
+                    TopAreasCard(reports: filteredReports)
+                        .padding(5)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .matchedTransitionSource(id: filteredReports.first?.localAuthority, in: hero)
                 
                 
                 
-                TopAreasCard(reports: filteredReports)
-                OutcomesChartView(reports: filteredReports)
+                   OutcomesChartView(reports: filteredReports)
                 ThemeRankingCard(themes: topThemes)
                 ProvisionTypeCard(data: provisionTypeDistribution)
                 
@@ -207,7 +210,7 @@ struct HomeView: View {
                     Picker("Time Filter", selection: $selectedTimeFilter) {
                         Text("This Month").tag(TimeFilter.last30Days)
                         Text("Last 3 Months").tag(TimeFilter.last3Months)
-                        Text("Last 12 Months").tag(TimeFilter.last6Months)
+                        Text("Last 6 Months").tag(TimeFilter.last6Months)
                         Text("Last 12 Months").tag(TimeFilter.last12Months)
                     }
                    
