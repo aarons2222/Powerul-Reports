@@ -14,9 +14,9 @@ struct ProvisionTypeCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Image(systemName: "building.2")
-                    .font(.title2)
-                    .foregroundColor(.purple)
+//                Image(systemName: "building.2")
+//                    .font(.title2)
+//                    .foregroundColor(.purple)
                 Text("Provision Types")
                     .font(.headline)
                 Spacer()
@@ -31,16 +31,23 @@ struct ProvisionTypeCard: View {
             .frame(height: 100)
             
             ForEach(data) { item in
-                HStack {
-                    Circle()
-                        .fill(item.color)
-                        .frame(width: 8, height: 8)
-                    Text(item.outcome)
-                        .font(.caption)
-                    Spacer()
-                    Text("\(item.count)")
-                        .font(.caption)
-                        .foregroundColor(.gray)
+                
+                if item.outcome != "empty"{
+                    HStack {
+                        Circle()
+                            .fill(item.color)
+                            .frame(width: 8, height: 8)
+                        Text(item.outcome)
+                            .font(.caption)
+                        Spacer()
+                        Text("\(item.count)")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                    
+                    .onAppear(){
+                        print("Type \(item.outcome)")
+                    }
                 }
             }
         }

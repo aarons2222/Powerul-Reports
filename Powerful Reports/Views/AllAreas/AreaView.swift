@@ -12,9 +12,13 @@ struct AreaView: View {
     let reports: [Report]
     
     var body: some View {
+        
+        VStack{
+            CustomHeaderVIew(title: area.name, showBackButton: true)
         ScrollView {
+            
             VStack(spacing: 20) {
-                // Overview Card
+                
                 CardView("Overview") {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Total Inspections: \(area.totalInspections)")
@@ -80,13 +84,10 @@ struct AreaView: View {
             }
             .padding()
         }
-   
-        .toolbar {
-            ToolbarTitleView(
-                icon: "map",
-                title: area.name,
-                iconColor: .blue
-            )
-        }
+        
+    }
+        .navigationBarHidden(true)
+        .ignoresSafeArea()
+       
     }
 }

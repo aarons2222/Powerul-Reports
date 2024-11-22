@@ -118,6 +118,8 @@ class InspectionReportsViewModel: ObservableObject {
                 self.reportsCount = self.reports.count
                 self.cacheReports()
                 print("Reports updated. Total count: \(self.reports.count)")
+                
+                
             } else {
                 print("No changes in reports.")
             }

@@ -92,7 +92,7 @@ enum RatingValue: String, CaseIterable {
     var color: Color {
         switch self {
         case .outstanding: return .green
-        case .good: return .blue
+        case .good: return .color1
         case .requiresImprovement: return .orange
         case .inadequate: return .red
         case .none: return .gray

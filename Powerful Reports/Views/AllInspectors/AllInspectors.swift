@@ -62,6 +62,8 @@ struct AllInspectors: View {
     var body: some View {
         
             VStack(alignment: .leading, spacing: 8) {
+                
+                
                 List {
                     ForEach(Array(groupedInspectorData.keys.sorted()), id: \.self) { letter in
                         Section(header: Text(letter)) {
@@ -85,7 +87,6 @@ struct AllInspectors: View {
                     }
                 }
             }
- 
             .toolbar {
                 ToolbarTitleView(
                     icon: "person.crop.badge.magnifyingglass",

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		936CE07B2CEFEDFE006BDD97 /* NavigationTransitions in Frameworks */ = {isa = PBXBuildFile; productRef = 936CE07A2CEFEDFE006BDD97 /* NavigationTransitions */; };
 		93BA2E022CEAA24D0025E019 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 93BA2E012CEAA24D0025E019 /* FirebaseAnalytics */; };
 		93BA2E042CEAA24D0025E019 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 93BA2E032CEAA24D0025E019 /* FirebaseCrashlytics */; };
 		93BA2E062CEAA24D0025E019 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 93BA2E052CEAA24D0025E019 /* FirebaseFirestore */; };
@@ -32,6 +33,7 @@
 				93BA2E022CEAA24D0025E019 /* FirebaseAnalytics in Frameworks */,
 				93BA2E042CEAA24D0025E019 /* FirebaseCrashlytics in Frameworks */,
 				93BA2E062CEAA24D0025E019 /* FirebaseFirestore in Frameworks */,
+				936CE07B2CEFEDFE006BDD97 /* NavigationTransitions in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -77,6 +79,7 @@
 				93BA2E012CEAA24D0025E019 /* FirebaseAnalytics */,
 				93BA2E032CEAA24D0025E019 /* FirebaseCrashlytics */,
 				93BA2E052CEAA24D0025E019 /* FirebaseFirestore */,
+				936CE07A2CEFEDFE006BDD97 /* NavigationTransitions */,
 			);
 			productName = "Powerful Reports";
 			productReference = 93BA2D642CEAA1520025E019 /* Powerful Reports.app */;
@@ -108,6 +111,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				93BA2E002CEAA24D0025E019 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				936CE0792CEFEDFE006BDD97 /* XCRemoteSwiftPackageReference "swiftui-navigation-transitions" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 93BA2D652CEAA1520025E019 /* Products */;
@@ -280,7 +284,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = co.uk.stricklandaaron.Reports;
+				PRODUCT_BUNDLE_IDENTIFIER = co.uk.strickland.Reports;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -309,7 +313,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = co.uk.stricklandaaron.Reports;
+				PRODUCT_BUNDLE_IDENTIFIER = co.uk.strickland.Reports;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -341,6 +345,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		936CE0792CEFEDFE006BDD97 /* XCRemoteSwiftPackageReference "swiftui-navigation-transitions" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/davdroman/swiftui-navigation-transitions";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.14.0;
+			};
+		};
 		93BA2E002CEAA24D0025E019 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
@@ -352,6 +364,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		936CE07A2CEFEDFE006BDD97 /* NavigationTransitions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 936CE0792CEFEDFE006BDD97 /* XCRemoteSwiftPackageReference "swiftui-navigation-transitions" */;
+			productName = NavigationTransitions;
+		};
 		93BA2E012CEAA24D0025E019 /* FirebaseAnalytics */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 93BA2E002CEAA24D0025E019 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;

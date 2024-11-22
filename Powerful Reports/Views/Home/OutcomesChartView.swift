@@ -46,9 +46,9 @@ struct OutcomesChartView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Image(systemName: "chart.pie.fill")
-                    .font(.title2)
-                    .foregroundColor(.blue)
+//                Image(systemName: "chart.pie.fill")
+//                    .font(.F)
+//                    .foregroundColor(.blue)
                 Text("Inspection Outcomes")
                     .font(.headline)
                 Spacer()

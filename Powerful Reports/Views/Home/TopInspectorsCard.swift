@@ -23,12 +23,13 @@ struct TopInspectorsCard: View {
             .map { InstpectorData(name: $0.key, count: $0.value) }
     }
     
+  
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Image(systemName: "person.crop.badge.magnifyingglass")
-                    .font(.title2)
-                    .foregroundColor(.blue)
+//                Image(systemName: "person.crop.badge.magnifyingglass")
+//                    .font(.title2)
+               //     .foregroundColor(.blue)
                 Text("Most Inspections")
                     .font(.headline)
                 Spacer()

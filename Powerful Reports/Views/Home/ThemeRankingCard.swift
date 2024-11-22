@@ -16,9 +16,9 @@ struct ThemeRankingCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Image(systemName: "list.bullet")
-                    .font(.title2)
-                    .foregroundColor(.green)
+//                Image(systemName: "list.bullet")
+//                    .font(.title2)
+                   // .foregroundColor(.green)
                 Text("Top Themes")
                     .font(.headline)
                 Spacer()

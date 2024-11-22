@@ -26,3 +26,22 @@ struct ToolbarTitleView: ToolbarContent {
     }
 }
 
+
+struct ToolbarTitleView2: View {
+    let icon: String
+    let title: String
+    let iconColor: Color
+    
+    var body: some View {
+      
+            HStack {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundColor(iconColor)
+                Text(title)
+                    .font(.title3)
+                Spacer()
+            }
+        
+    }
+}

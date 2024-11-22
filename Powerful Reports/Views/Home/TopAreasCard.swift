@@ -26,9 +26,9 @@ struct TopAreasCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Image(systemName: "map")
-                    .font(.title2)
-                    .foregroundColor(.blue)
+//                Image(systemName: "map")
+//                    .font(.title2)
+                 //   .foregroundColor(.blue)
                 Text("Most Inspected Areas")
                     .font(.headline)
                 Spacer()

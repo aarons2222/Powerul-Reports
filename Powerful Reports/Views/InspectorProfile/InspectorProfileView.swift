@@ -12,6 +12,8 @@ struct InspectorProfileView: View {
     let profile: InspectorProfile
     let reports: [Report]  // Add reports parameter
     
+
+    
     private var recentReports: [Report] {
        Array(reports
            .filter { $0.inspector == profile.name }

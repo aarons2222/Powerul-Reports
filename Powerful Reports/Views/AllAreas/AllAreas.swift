@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import SwiftUI
 
 struct AreaProfile: Identifiable {
     let id = UUID()
@@ -26,6 +25,13 @@ struct AreaInformation: Identifiable {
 
 struct AllAreas: View {
     let reports: [Report]
+    
+    @Environment(\.presentationMode) private var presentationMode
+    
+    @State private var animateGradient: Bool = false
+    
+    private let startColor: Color = .color2
+    private let endColor: Color = .color1
     
     private func getAreaProfile(name: String) -> AreaProfile {
         let areaReports = reports.filter { $0.localAuthority == name }
@@ -83,36 +89,69 @@ struct AllAreas: View {
     }
     
     var body: some View {
+        
+        
+        
+        
+        
         VStack(alignment: .leading, spacing: 8) {
-            List {
-                ForEach(Array(groupedAreaData.keys.sorted()), id: \.self) { letter in
-                    Section(header: Text(letter)) {
-                        ForEach(groupedAreaData[letter] ?? []) { item in
-                            NavigationLink(destination: AreaView(area: getAreaProfile(name: item.name), reports: reports)) {
-                                HStack(alignment: .center) {
-                                    Text(item.name)
-                                        .font(.system(.body, design: .rounded))
-                                    
-                                    Spacer()
-                                    
-                                    Text("\(item.count)")
-                                        .font(.system(.body, design: .rounded))
-                                        .foregroundColor(.gray)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 4)
+            
+            CustomHeaderVIew(title: "All Areas", showBackButton: false)
+
+            
+            
+            ScrollView {
+                LazyVStack(spacing: 16, pinnedViews: [.sectionHeaders]) {
+                    ForEach(Array(groupedAreaData.keys.sorted()), id: \.self) { letter in
+                        Section {
+                            ForEach(groupedAreaData[letter] ?? []) { item in
+                                NavigationLink(destination: AreaView(area: getAreaProfile(name: item.name), reports: reports)) {
+                                    HStack(alignment: .center) {
+                                        Text(item.name)
+                                            .font(.callout)
+                                            .foregroundStyle(.color4)
+                                        Spacer()
+                                        Text("\(item.count)")
+                                            .font(.subheadline)
+                                        
+                                    }
+                                    .padding()
+                                    .background(Color.color1.opacity(0.4))
+                                    .cornerRadius(10)
                                 }
+                                .buttonStyle(PlainButtonStyle())
                             }
-                        }
-                    }
+                        } header: {
+                            ZStack {
+                                Rectangle()
+                                    .fill(Color.white)
+                                    .ignoresSafeArea()
+                                
+                                Text(letter)
+                                    .font(.title3)
+                                    .padding(.horizontal, 12)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .foregroundStyle(.color4)
+                            }
+                            
+                        }                        }
                 }
+                .padding(.horizontal)
             }
+            .scrollIndicators(.hidden)
+            .padding(.bottom)
+            .background(.clear)
+            .navigationBarHidden(true)
+            
         }
-        .toolbar {
-            ToolbarTitleView(
-                icon: "map",
-                title: "All Areas",
-                iconColor: .blue
-            )
-        }
+        .ignoresSafeArea()
+        
     }
+    
+    
+    
 }
+
+
+
+
