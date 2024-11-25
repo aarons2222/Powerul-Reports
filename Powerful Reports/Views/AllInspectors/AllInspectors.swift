@@ -14,9 +14,9 @@ struct InspectorProfile: Identifiable {
     let areas: [String: Int]
     let grades: [String: Int]
 }
-
 struct AllInspectors: View {
     let reports: [Report]
+    @State private var searchText = ""
     
     private func getInspectorProfile(name: String) -> InspectorProfile {
         let inspectorReports = reports.filter { $0.inspector == name }
@@ -26,12 +26,10 @@ struct AllInspectors: View {
         
         var allGrades: [String: Int] = [:]
         
-        // Count overall effectiveness ratings
         inspectorReports.forEach { report in
             if let overallRating = report.ratings.first(where: { $0.category == RatingCategory.overallEffectiveness.rawValue }) {
                 allGrades[overallRating.rating, default: 0] += 1
             } else {
-                // If no overall effectiveness, use outcome (met/not met)
                 if !report.outcome.isEmpty {
                     allGrades[report.outcome, default: 0] += 1
                 }
@@ -59,46 +57,117 @@ struct AllInspectors: View {
         }
     }
     
-    var body: some View {
+    private var filteredInspectorData: [String: [InstpectorData]] {
+        if searchText.isEmpty {
+            return groupedInspectorData
+        }
         
-            VStack(alignment: .leading, spacing: 8) {
-                
-                
-                List {
-                    ForEach(Array(groupedInspectorData.keys.sorted()), id: \.self) { letter in
-                        Section(header: Text(letter)) {
-                            ForEach(groupedInspectorData[letter] ?? []) { item in
-                                NavigationLink(destination: InspectorProfileView(profile: getInspectorProfile(name: item.name), reports: reports)) {
-                                    HStack(alignment: .center) {
-                                        Text(item.name)
-                                            .font(.system(.body, design: .rounded))
-                                        
-                                        Spacer()
-                                        
-                                        Text("\(item.count)")
-                                            .font(.system(.body, design: .rounded))
-                                            .foregroundColor(.gray)
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 4)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            .toolbar {
-                ToolbarTitleView(
-                    icon: "person.crop.badge.magnifyingglass",
-                    title: "Most Inspections",
-                    iconColor: .blue
-                )
+        let filteredData = groupedInspectorData.flatMap { _, areas in
+            areas.filter { area in
+                area.name.localizedCaseInsensitiveContains(searchText)
             }
         }
+        
+        return Dictionary(grouping: filteredData) {
+            String($0.name.prefix(1)).uppercased()
+        }
     }
+    
+    
+    init(reports: [Report]){
+        self.reports = reports
+        print("Logger: AllInspectors")
 
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            CustomHeaderVIew(title: "Inspectors")
+            
+            
+            SearchBar(searchText: $searchText, placeHolder: "Search Inspectors...")
+            
+            if filteredInspectorData.isEmpty {
+                HStack {
+                    Spacer()
+                    VStack {
+                        Text("Inspector not found")
+                            .font(.title)
+                            .foregroundStyle(.color2)
+                    }
+                    Spacer()
+                }
+                .padding(.top, 30)
+                Spacer()
+            } else {
+                ScrollView {
+                   LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+                       ForEach(Array(filteredInspectorData.keys.sorted()), id: \.self) { letter in
+                           if let inspectors = filteredInspectorData[letter], !inspectors.isEmpty {
+                               Section {
+                                   ForEach(inspectors) { item in
+                                       NavigationLink {
+                                           InspectorProfileView(profile: getInspectorProfile(name: item.name), reports: reports)
+                                       } label: {
+                                           HStack(alignment: .center) {
+                                               Text(item.name)
+                                                   .font(.callout)
+                                                   .foregroundStyle(.color4)
+                                               Spacer()
+                                               Text("\(item.count)")
+                                                   .font(.subheadline)
+                                           }
+                                           .padding()
+                                           .background(Color.color1.opacity(0.4))
+                                           .cornerRadius(10)
+                                       }
+                                       .buttonStyle(PlainButtonStyle())
+                                       .padding(.bottom, 16)
+                                   }
+                               } header: {
+                                   ZStack {
+                                       Rectangle()
+                                           .fill(Color.white)
+                                           .ignoresSafeArea()
+                                       
+                                       VStack {
+                                           Spacer()
+                                           Text(letter)
+                                               .font(.title3)
+                                               .padding(.horizontal, 12)
+                                               .frame(maxWidth: .infinity, alignment: .leading)
+                                               .foregroundStyle(.color4)
+                                           Spacer()
+                                       }
+                                       .frame(height: 40)
+                                   }
+                               }
+                           }
+                       }
+                   }
+                   .padding(.horizontal)
+                }
+                .scrollIndicators(.hidden)
+                .padding(.bottom)
+                .background(.clear)
+              
+            }
+        }
+        .ignoresSafeArea()
+        .navigationBarHidden(true)
+    }
+}
 
-
-
-
-
+struct InstpectorData: Identifiable, Hashable {
+    let id = UUID()
+    let name: String
+    let count: Int
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    static func == (lhs: InstpectorData, rhs: InstpectorData) -> Bool {
+        lhs.id == rhs.id
+    }
+}

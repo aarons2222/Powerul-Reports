@@ -27,51 +27,50 @@ struct TopInspectorsCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-//                Image(systemName: "person.crop.badge.magnifyingglass")
-//                    .font(.title2)
-               //     .foregroundColor(.blue)
-                Text("Most Inspections")
-                    .font(.headline)
+                Text("Most Active Inspectors")
+                    .font(.title3)
+                    .fontWeight(.regular)
+                    .foregroundColor(.color4)
+                
                 Spacer()
+                Image(systemName: "plus.circle")
+                    .font(.title2)
+                    .foregroundColor(.color1)
             }
+            .padding(.bottom, 20)
             
-            Divider()
+       
             
-            // List of areas
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(inspectorData) { item in
+            ScrollView{
+                
+                
+                ForEach(0..<inspectorData.count, id: \.self) { index in
+                    let item = inspectorData[index]
                     HStack(alignment: .center) {
                         Text("\(item.name)")
-                            .font(.system(.body, design: .rounded))
+                            .font(.body)
+                            .foregroundStyle(.color4)
                         
                         Spacer()
                         
                         Text("\(item.count)")
-                            .font(.system(.body, design: .rounded))
+                            .font(.body)
                             .foregroundColor(.gray)
-                            .padding(.horizontal, 12)
+                            .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color(.systemGray6))
-                            )
+                        
                     }
-                 
+                    
+                    if index < inspectorData.count - 1 {
+                        Divider()
+                    }
+                    
                 }
+                
             }
         }
         .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-        )
+        .cardBackground()
     }
 }
 
-// Data model for area statistics
-struct InstpectorData: Identifiable {
-    let id = UUID()
-    let name: String
-    let count: Int
-}

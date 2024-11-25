@@ -3,13 +3,16 @@ import Firebase
 
 class InspectionReportsViewModel: ObservableObject {
     @Published var reports: [Report] = []
-    @State var isTrial = false // Set to true for testing
+    
+    
     
     private var db = Firestore.firestore()
     private var listener: ListenerRegistration?
     
     @AppStorage("reportCount") var reportsCount: Int = 0
     private let reportsCacheKey = "cachedInspectionReports"
+    
+    @AppStorage("isTrial") var isTrial: Bool = false
     
     init() {
         if isTrial {
@@ -30,7 +33,7 @@ class InspectionReportsViewModel: ObservableObject {
         }
         
         if let savedData = UserDefaults.standard.data(forKey: reportsCacheKey) {
-            let decoder = JSONDecoder() 
+            let decoder = JSONDecoder()
             if let decodedReports = try? decoder.decode([Report].self, from: savedData) {
                 self.reports = decodedReports
             }
@@ -71,7 +74,7 @@ class InspectionReportsViewModel: ObservableObject {
             
             let newReports = documents.compactMap { document -> Report? in
                 let data = document.data()
-                print("Raw Firestore Data: \(data)")
+               // print("Raw Firestore Data: \(data)")
                 
                 let ratingsData = data["ratings"] as? [[String: Any]] ?? []
                 let ratings = ratingsData.map { ratingData in
@@ -287,4 +290,87 @@ class InspectionReportsViewModel: ObservableObject {
         )
     ]
 
+    
+    func calculatePercentage(_ count: Int) -> Int {
+         guard reports.count > 0 else { return 0 }
+         return Int(round(Double(count) / Double(reports.count) * 100))
+    }
+    
+    var provisionTypeDistribution: [OutcomeData] {
+        let types = reports.map { $0.typeOfProvision }
+        
+        let counts = Dictionary(grouping: types) { $0 }
+            .mapValues { $0.count }
+
+        return counts.map { type, count in
+
+            let displayType = type.isEmpty ? "Not Specified" : type
+
+
+            let color: Color = if type.contains("Childminder") {
+                .color1
+            } else if type.contains("non-") {
+                .color6
+            }else if  type.contains("childcare on domestic") {
+                .color5
+            } else {
+                .color7
+            }
+
+            return OutcomeData(
+                outcome: displayType,
+                count: count,
+                color: color
+            )
+        }.sorted { $0.count > $1.count }
+    }
+    
+    
+     func getInspectorProfile(name: String) -> InspectorProfile {
+        let inspectorReports = reports.filter { $0.inspector == name }
+        
+        let areas = Dictionary(grouping: inspectorReports) { $0.localAuthority }
+            .mapValues { $0.count }
+        
+        var allGrades: [String: Int] = [:]
+        
+        inspectorReports.forEach { report in
+            if let overallRating = report.ratings.first(where: { $0.category == RatingCategory.overallEffectiveness.rawValue }) {
+                allGrades[overallRating.rating, default: 0] += 1
+            } else {
+                if !report.outcome.isEmpty {
+                    allGrades[report.outcome, default: 0] += 1
+                }
+            }
+        }
+        
+        return InspectorProfile(
+            name: name,
+            totalInspections: inspectorReports.count,
+            areas: areas,
+            grades: allGrades
+        )
+    }
+    
+}
+
+
+ extension Calendar {
+    func startOfMonth(for date: Date) -> Date {
+        let components = dateComponents([.year, .month], from: date)
+        return self.date(from: components)!
+    }
+    
+    func endOfMonth(for date: Date) -> Date {
+        let components = DateComponents(month: 1, day: -1)
+        return self.date(byAdding: components, to: startOfMonth(for: date))!
+    }
+}
+
+ extension Date {
+    var monthYearString: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM yyyy"
+        return formatter.string(from: self)
+    }
 }

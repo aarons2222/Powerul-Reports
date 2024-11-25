@@ -10,60 +10,67 @@ import SwiftUI
 struct ReportView: View {
     var report: Report
     
+    init(report: Report) {
+        self.report = report
+        
+        print("ReportView \(report.referenceNumber)")
+    }
     var body: some View {
-        ScrollView {
+        
+        VStack(alignment: .leading, spacing: 0) {
+            
+            CustomHeaderVIew(title: report.referenceNumber)
+            
             VStack(spacing: 20) {
-                CardView("Report Information") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        
-                        Text("Reference: \(report.referenceNumber)")
-                        Text("Inspector: \(report.inspector)")
-                        Text("Date: \(report.formattedDate)")
-                        Text("Local Authority: \(report.localAuthority)")
-                        Text("Type: \(report.typeOfProvision)")
-                        
-                        if (!report.previousInspection.contains("Not applicable")){
-                            Text("Previous: \(report.previousInspection)")
+                
+                ScrollView {
+                    CardView("Report Information") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            
+                            Text("Reference: \(report.referenceNumber)")
+                            Text("Inspector: \(report.inspector)")
+                            Text("Date: \(report.formattedDate)")
+                            Text("Local Authority: \(report.localAuthority)")
+                            Text("Type: \(report.typeOfProvision)")
+                            
+                            if (!report.previousInspection.contains("Not applicable")){
+                                Text("Previous: \(report.previousInspection)")
+                            }
                         }
                     }
-                }
-                
-                CardView("Grade") {
-                    if (!report.outcome.isEmpty) {
-                        Text("Outcome: \(report.outcome)")
-                    } else {
-                        VStack(alignment: .leading, spacing: 8) {
-                            ForEach(report.ratings, id: \.category) { rating in
-                                HStack {
-                                    Text(rating.category)
-                                    Spacer()
-                                    Text(rating.rating)
-                                        .foregroundColor(RatingValue(rawValue: rating.rating)?.color ?? .gray)
+                    
+                    CardView("Grade") {
+                        if (!report.outcome.isEmpty) {
+                            Text("Outcome: \(report.outcome)")
+                        } else {
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(report.ratings, id: \.category) { rating in
+                                    HStack {
+                                        Text(rating.category)
+                                        Spacer()
+                                        Text(rating.rating)
+                                            .foregroundColor(RatingValue(rawValue: rating.rating)?.color ?? .gray)
+                                    }
+                                    .padding(.vertical, 4)
                                 }
-                                .padding(.vertical, 4)
+                            }
+                        }
+                    }
+                    
+                    CardView("Themes") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(report.sortedThemes, id: \.topic) { theme in
+                                Text(theme.topic)
+                                    .padding(.vertical, 2)
                             }
                         }
                     }
                 }
-                
-                CardView("Themes") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(report.sortedThemes, id: \.topic) { theme in
-                            Text(theme.topic)
-                                .padding(.vertical, 2)
-                        }
-                    }
-                }
+                .padding()
             }
-            .padding()
         }
-        .toolbar {
-            ToolbarTitleView(
-                icon: "text.page",
-                title: "Report Information",
-                iconColor: .blue
-            )
-        }
+            .ignoresSafeArea()
+            .navigationBarHidden(true)
     }
 }
 

@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		936CE07B2CEFEDFE006BDD97 /* NavigationTransitions in Frameworks */ = {isa = PBXBuildFile; productRef = 936CE07A2CEFEDFE006BDD97 /* NavigationTransitions */; };
 		93BA2E022CEAA24D0025E019 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 93BA2E012CEAA24D0025E019 /* FirebaseAnalytics */; };
 		93BA2E042CEAA24D0025E019 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 93BA2E032CEAA24D0025E019 /* FirebaseCrashlytics */; };
 		93BA2E062CEAA24D0025E019 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 93BA2E052CEAA24D0025E019 /* FirebaseFirestore */; };
@@ -33,7 +32,6 @@
 				93BA2E022CEAA24D0025E019 /* FirebaseAnalytics in Frameworks */,
 				93BA2E042CEAA24D0025E019 /* FirebaseCrashlytics in Frameworks */,
 				93BA2E062CEAA24D0025E019 /* FirebaseFirestore in Frameworks */,
-				936CE07B2CEFEDFE006BDD97 /* NavigationTransitions in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -79,7 +77,6 @@
 				93BA2E012CEAA24D0025E019 /* FirebaseAnalytics */,
 				93BA2E032CEAA24D0025E019 /* FirebaseCrashlytics */,
 				93BA2E052CEAA24D0025E019 /* FirebaseFirestore */,
-				936CE07A2CEFEDFE006BDD97 /* NavigationTransitions */,
 			);
 			productName = "Powerful Reports";
 			productReference = 93BA2D642CEAA1520025E019 /* Powerful Reports.app */;
@@ -111,7 +108,6 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				93BA2E002CEAA24D0025E019 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
-				936CE0792CEFEDFE006BDD97 /* XCRemoteSwiftPackageReference "swiftui-navigation-transitions" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 93BA2D652CEAA1520025E019 /* Products */;
@@ -277,8 +273,9 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -306,8 +303,9 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -345,14 +343,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		936CE0792CEFEDFE006BDD97 /* XCRemoteSwiftPackageReference "swiftui-navigation-transitions" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/davdroman/swiftui-navigation-transitions";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.14.0;
-			};
-		};
 		93BA2E002CEAA24D0025E019 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
@@ -364,11 +354,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		936CE07A2CEFEDFE006BDD97 /* NavigationTransitions */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 936CE0792CEFEDFE006BDD97 /* XCRemoteSwiftPackageReference "swiftui-navigation-transitions" */;
-			productName = NavigationTransitions;
-		};
 		93BA2E012CEAA24D0025E019 /* FirebaseAnalytics */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 93BA2E002CEAA24D0025E019 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;

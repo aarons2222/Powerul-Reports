@@ -12,6 +12,8 @@ struct InspectorProfileView: View {
     let profile: InspectorProfile
     let reports: [Report]  // Add reports parameter
     
+    
+
 
     
     private var recentReports: [Report] {
@@ -29,107 +31,140 @@ struct InspectorProfileView: View {
            .prefix(10))
     }
     
-    private var themeFrequencies: [String: Int] {
-       var frequencies: [String: Int] = [:]
-       let inspectorReports = reports.filter { $0.inspector == profile.name }
-       
-       for report in inspectorReports {
-           for theme in report.themes {
-               frequencies[theme.topic, default: 0] += theme.frequency
-           }
-       }
-       return frequencies.sorted { $0.value > $1.value }
-           .prefix(5)
-           .reduce(into: [:]) { dict, pair in
-               dict[pair.key] = pair.value
-           }
+
+    
+    
+    
+    init(profile: InspectorProfile, reports: [Report]){
+        self.profile = profile
+        self.reports = reports
+        print("Logger: AllInspectors")
+
     }
     
+    
     var body: some View {
-        List {
-            Section(header: Text("Overview")) {
-                LabeledContent("Total Inspections", value: "\(profile.totalInspections)")
-            }
+        
+        let statistics = ThemeAnalyzer.getInspectorThemeStatistics(from: reports, for: profile.name)
+        
+        VStack(alignment: .leading, spacing: 0) {
             
-            Section(header: Text("Details")) {
-                ForEach(recentReports) { report in
+            CustomHeaderVIew(title: profile.name)
+            
+            List {
+                
+                Section(header: Text("Overview")) {
+                    LabeledContent("Total Inspections", value: "\(profile.totalInspections)")
+                }
+                
+                
+                
+                
+                Section {
+                             
                     
-                    
-                    NavigationLink {
-                        ReportView(report: report)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(report.referenceNumber)
-                                .font(.headline)
-                            Text(report.date)
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
-                            Text(report.overallRating ?? report.outcome)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                    ForEach(Array(recentReports.prefix(5))) { report in
+                        
+                        
+                        NavigationLink {
+                            ReportView(report: report)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(report.referenceNumber)
+                                    .font(.headline)
+                                Text(report.date)
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                                Text(report.overallRating ?? report.outcome)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                          
+                        }
+                        .padding(.vertical, 4)
+                     
+                  
+                    }
+                       } header: {
+
+                                  Text("Recent Reviews")
+                            } footer: {
+
+                                HStack{
+                                    Spacer()
+                                    if (recentReports.count > 5){
+                                        NavigationLink {
+                                            MoreReportsView(reports: recentReports, name: profile.name)
+                                        } label: {
+                                            Text("See all reports")
+                                        }
+                                    }
+                                }
+                        }
+                
+                
+             
+                
+       
+                Section(header: Text("Areas Covered")) {
+                    ForEach(Array(profile.areas.keys.sorted()), id: \.self) { area in
+                        LabeledContent(area, value: "\(profile.areas[area] ?? 0)")
+                    }
+                }
+                
+                
+                ForEach(statistics.topThemes.prefix(10), id: \.topic) { themeFreq in
+                       HStack {
+                           Text(themeFreq.topic)
+                           Spacer()
+                           Text("\(themeFreq.count)")
+                               .foregroundColor(.secondary)
+                     
+                       }
+                   }
+                
+                
+                
+                
+                
+                
+                /// totdo
+                
+                Section(header: Text("Grades")) {
+                    Chart {
+                        ForEach(Array(profile.grades), id: \.key) { grade, count in
+                            SectorMark(
+                                angle: .value("Count", count),
+                                angularInset: 1
+                            )
+                            .cornerRadius(5)
+                            .foregroundStyle(RatingValue(rawValue: grade)?.color ?? .gray)
                         }
                     }
-                    .padding(.vertical, 4)
+                    .frame(height: 200)
+                    .padding()
                     
-                    
-                    
-                }
-            }
-            
-            Section(header: Text("Areas Covered")) {
-                ForEach(Array(profile.areas.keys.sorted()), id: \.self) { area in
-                    LabeledContent(area, value: "\(profile.areas[area] ?? 0)")
-                }
-            }
-            
-            
-            Section(header: Text("Common Themes")) {
-                ForEach(Array(themeFrequencies.sorted { $0.value > $1.value }), id: \.key) { theme, count in
-                    HStack {
-                        Text(theme)
-                        Spacer()
-                        Text("\(count)")
-                            .foregroundColor(.secondary)
+                    ForEach(profile.grades.sorted(by: { $0.key < $1.key }), id: \.key) { grade, count in
+                        if grade != "empty" {
+                            HStack {
+                                Image(systemName: "largecircle.fill.circle")
+                                    .font(.body)
+                                    .foregroundStyle(RatingValue(rawValue: grade)?.color ?? .gray)
+                                Text(grade)
+                                    .font(.body)
+                                    .foregroundColor(.color4)
+                                Spacer()
+                                Text("\(calculatePercentage(count))%")
+                                    .font(.body)
+                                    .foregroundColor(.gray)
+                            }
+                        }
                     }
                 }
-            }
-            
-            
-            
-            
-            
-            
-            
-            
-        
-            Section(header: Text("Grades")) {
-                let gradeColors: [String: Color] = [
-                    "Outstanding": .green,
-                    "Good": .blue,
-                    "Requires Improvement": .orange,
-                    "Inadequate": .red
-                ]
                 
-                Chart {
-                    ForEach(Array(profile.grades.keys.sorted()), id: \.self) { grade in
-                        SectorMark(
-                            angle: .value("Count", profile.grades[grade] ?? 0)
-                        )
-                        .foregroundStyle(gradeColors[grade, default: .gray])
-                        
-                    }
-                }
-                .frame(height: 200)
-                .padding()
                 
-                ForEach(Array(profile.grades.keys.sorted()), id: \.self) { grade in
-                    LabeledContent(grade, value: "\(profile.grades[grade] ?? 0)")
-                }
-            }
-            
-            
-            
-        
+                
+                
                 Button(action: {
                     generatePDF()
                 }) {
@@ -143,22 +178,24 @@ struct InspectorProfileView: View {
                     .foregroundColor(.white)
                     .cornerRadius(10)
                 }
-          
-            .padding()
-
+                
+                .padding()
+                
+                
+            }
             
         }
-   
-        .toolbar {
-            ToolbarTitleView(
-                icon: "person.text.rectangle",
-                title: profile.name,
-                iconColor: .blue
-            )
-        }
+        .ignoresSafeArea()
+        .navigationBarHidden(true)
+        
+        
+       
     }
     
-    
+    func calculatePercentage(_ count: Int) -> Int {
+         guard profile.totalInspections > 0 else { return 0 }
+         return Int(round(Double(count) / Double(profile.totalInspections) * 100))
+    }
     
     
     
@@ -237,3 +274,4 @@ class PDFRenderer {
         }
     }
 }
+

@@ -15,12 +15,11 @@ struct HomeView: View {
         @Namespace var hero
         @StateObject private var viewModel = InspectionReportsViewModel()
     
-    
         @AppStorage("selectedTimeFilter") private var selectedTimeFilter: TimeFilter = .last30Days
     @Environment(\.colorScheme) private var scheme
     
     
-    @State var showSettings = false
+          @State var showSettings = false
     
     
     
@@ -49,28 +48,27 @@ struct HomeView: View {
     
         private var provisionTypeDistribution: [OutcomeData] {
             let types = viewModel.reports.map { $0.typeOfProvision }
+                            
+         
+            
+            
+            
             let counts = Dictionary(grouping: types) { $0 }
                 .mapValues { $0.count }
     
             return counts.map { type, count in
     
-    
-    
-    
-    
                 let displayType = type.isEmpty ? "Not Specified" : type
     
-    
-    
-    
+
                 let color: Color = if type.contains("Childminder") {
                     .color1
-                } else if type.contains("childcare on non-domestic") {
-                    .green
+                } else if type.contains("non-") {
+                    .color6
                 }else if  type.contains("childcare on domestic") {
-                    .yellow
+                    .color5
                 } else {
-                    .purple
+                    .color7
                 }
     
                 return OutcomeData(
@@ -81,22 +79,23 @@ struct HomeView: View {
             }.sorted { $0.count > $1.count }
         }
     
-        private var topThemes: [(String, Int)] {
-            let allThemes = viewModel.reports.flatMap { $0.themes }
-            var themeCounts: [String: Int] = [:]
-    
-            allThemes.forEach { theme in
-                themeCounts[theme.topic.capitalized, default: 0] += theme.frequency
-            }
-    
-            return themeCounts.sorted { $0.value > $1.value }
-                .prefix(5)
-                .map { ($0.key, $0.value) }
-        }
     
     
     
+    
+    private func getTheThemes(amount: Int?) -> [(String, Int)] {
+        let allThemes = viewModel.reports.flatMap { $0.themes }
+        var themeCounts: [String: Int] = [:]
         
+        allThemes.forEach { theme in
+            themeCounts[theme.topic, default: 0] += theme.frequency
+        }
+        
+        let sorted = themeCounts.sorted { $0.value > $1.value }
+        return amount == nil ? sorted : sorted.prefix(amount!).map { ($0.key, $0.value) }
+    }
+
+    
     
     
     var body: some View {
@@ -108,8 +107,8 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 15, content: {
                     
                     HStack(alignment: .center){
-                        Text("Dashboard")
-                            .font(.largeTitle.bold())
+                        Text("Overview")
+                            .font(.largeTitle)
                             .frame(height: 45)
                             .padding(.horizontal, 15)
                             .foregroundStyle(.color4)
@@ -165,36 +164,49 @@ struct HomeView: View {
                 })
                 
                 LazyVStack(spacing: 15) {
-                    Menu {
-                        Picker("Time Filter", selection: $selectedTimeFilter) {
-                            Text("This Month").tag(TimeFilter.last30Days)
-                            Text("Last 3 Months").tag(TimeFilter.last3Months)
-                            Text("Last 6 Months").tag(TimeFilter.last6Months)
-                            Text("Last 12 Months").tag(TimeFilter.last12Months)
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text("Filter By")
-                            Image(systemName: "chevron.down")
-                        }
-                        .font(.caption)
-                        .foregroundStyle(.gray)
-                      
+
+                    
+                    SegmentedControl(
+                        tabs: TimeFilter.allCases,
+                        activeTab: $selectedTimeFilter,
+                        height: 35,
+                        extraText: nil,
+                        font: .subheadline,
+                        activeTint: .color2,
+                        inActiveTint: .color4.opacity(0.8)
+                    ) { size in
+                        RoundedRectangle(cornerRadius: 0)
+                            .fill(.color2)
+                            .frame(height: 3)
+                            .padding(.horizontal, 10)
+                            .offset(y: 2)
+                            .frame(maxHeight: .infinity, alignment: .bottom)
                     }
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.horizontal, 0)
                     
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 20) {
+               
+                        NavigationLink {
+                            AnnualStats(viewModel: viewModel)
+                                .navigationTransition(.zoom(sourceID: filteredReports.first?.outcome, in: hero))
                             
                             
-                            OutcomesChartView(reports: filteredReports)
+                        } label: {
+                            OutcomesChartView(reports: filteredReports, viewModel: viewModel)
+                            .padding(.bottom, 5)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .matchedTransitionSource(id: filteredReports.first?.outcome, in: hero)
                             
+                       
+                            
+                        
                          
                             
                             
                             NavigationLink {
                                 AllInspectors(reports: viewModel.reports)
-                                    .navigationTransition(.zoom(sourceID: filteredReports.first?.typeOfProvision, in: hero))
+                                    .navigationTransition(.zoom(sourceID: filteredReports.first?.inspector, in: hero))
                                 
                                 
                             } label: {
@@ -202,7 +214,7 @@ struct HomeView: View {
                                     .padding(5)
                             }
                             .buttonStyle(PlainButtonStyle())
-                            .matchedTransitionSource(id: filteredReports.first?.typeOfProvision, in: hero)
+                            .matchedTransitionSource(id: filteredReports.first?.inspector, in: hero)
                             
                             
                             
@@ -221,15 +233,31 @@ struct HomeView: View {
                             
                             
                             
+                            NavigationLink {
+                              
+                                
+                                
+                            } label: {
+                                ThemeRankingCard(themes: getTheThemes(amount: 5))
+                                    .padding(5)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .matchedTransitionSource(id: filteredReports.first?.themes, in: hero)
+                            
                        
-                            ThemeRankingCard(themes: topThemes)
-                            ProvisionTypeCard(data: provisionTypeDistribution)
-                        }
-                        .padding()
+                    
+                           
+                        ProvisionTypeCard(data: provisionTypeDistribution, viewModel: viewModel)
+                        
+                              
+                        
+              
                     }
+                    .padding()
                     .scrollIndicators(.hidden)
+                    
                 }
-                .padding(15)
+                .padding(.vertical)
                 .mask {
                     Rectangle()
                         .visualEffect { content, proxy in
@@ -256,9 +284,14 @@ struct HomeView: View {
             }
             .padding(.vertical, 15)
         }
+        .scrollIndicators(.hidden)
         .scrollTargetBehavior(CustomScrollBehaviour())
             
-        .fullScreenCover(isPresented: $showSettings, content: SettingsView.init)
+        .sheet(isPresented: $showSettings) {
+                SettingsView()
+                       .presentationDetents([.large])
+               }
+            
 
      
     }
@@ -305,7 +338,8 @@ struct HomeView: View {
                     Spacer(minLength: 0)
                     
                     Text("\(reportNumber)")
-                        .font(.title.bold())
+                        .font(.largeTitle)
+                        .fontWeight(.regular)
                     
                     Text("Total Reports")
                         .font(.callout)
@@ -344,22 +378,113 @@ struct CustomScrollBehaviour: ScrollTargetBehavior {
 
 
 
-//
-//struct DashboardItem: Identifiable {
-//    let id = UUID()
-//    let title: String
-//    let value: String
-//    let icon: String
-//    let color: Color
-//}
 
-
-
-
-struct OutcomeData: Identifiable {
+struct OutcomeData: Identifiable, Equatable {
     let id = UUID()
     let outcome: String
     let count: Int
     let color: Color
+    
+    var isAnimated: Bool = false
+    
+ 
+        static func == (lhs: OutcomeData, rhs: OutcomeData) -> Bool {
+            return lhs.id == rhs.id && lhs.id == rhs.id
+            // ... compare other properties
+        }
+    }
+
+
+
+
+struct SegmentedControl<Indicator: View, Tab: RawRepresentable & CaseIterable & Equatable & Hashable>: View where Tab.RawValue == String {
+    var tabs: [Tab]
+    @Binding var activeTab: Tab
+    var height: CGFloat = 45
+    var extraText: ((Tab) -> String)?
+    /// Customization Properties
+    var displayAsText: Bool = false
+    var font: Font = .footnote
+    var activeTint: Color
+    var inActiveTint: Color
+    /// Indicator View
+    @ViewBuilder var indicatorView: (CGSize) -> Indicator
+    /// View Properties
+    @State private var excessTabWidth: CGFloat = .zero
+    @State private var minX: CGFloat = .zero
+
+    var body: some View {
+        GeometryReader { geometry in
+            let size = geometry.size
+            let containerWidthForEachTab = size.width / CGFloat(tabs.count)
+            
+            HStack(spacing: 0) {
+                ForEach(tabs, id: \.self) { tab in
+                    Group {
+                         if let extraText = extraText?(tab) {
+                             Text("\(tab.rawValue) \(extraText)")
+                                 .lineLimit(1)
+                                 .minimumScaleFactor(0.7)
+                                 .padding(.horizontal, 4)
+                         } else {
+                             Text(tab.rawValue)
+                            
+                         }
+                     }
+                    .font(font)
+                    .foregroundStyle(activeTab == tab ? activeTint : inActiveTint)
+                    .animation(.snappy, value: activeTab)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(.rect)
+                    .onTapGesture {
+                        DispatchQueue.main.async{
+                            if let index = tabs.firstIndex(of: tab), let activeIndex = tabs.firstIndex(of: activeTab) {
+                                activeTab = tab
+                                
+                                withAnimation(.snappy(duration: 0.45, extraBounce: 0), completionCriteria: .logicallyComplete) {
+                                    excessTabWidth = containerWidthForEachTab * CGFloat(index - activeIndex)
+                                } completion: {
+                                    withAnimation(.snappy(duration: 0.45, extraBounce: 0)) {
+                                        minX = containerWidthForEachTab * CGFloat(index)
+                                        excessTabWidth = 0
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .background(alignment: .leading) {
+                        if tabs.first == tab {
+                            GeometryReader { proxy in
+                                let size = proxy.size
+                                
+                                indicatorView(size)
+                                    .frame(width: size.width + (excessTabWidth < 0 ? -excessTabWidth : excessTabWidth), height: size.height)
+                                    .frame(width: size.width, alignment: excessTabWidth < 0 ? .trailing : .leading)
+                                    .offset(x: minX)
+                            }
+                        }
+                    }
+                }
+            }
+            .preference(key: SizeKey.self, value: size)
+            .onPreferenceChange(SizeKey.self) { size in
+                if let index = tabs.firstIndex(of: activeTab) {
+                    minX = containerWidthForEachTab * CGFloat(index)
+                    excessTabWidth = 0
+                }
+            }
+        }
+        .frame(height: height)
+    }
 }
+
+
+fileprivate struct SizeKey: PreferenceKey {
+    static var defaultValue: CGSize = .zero
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
+        value = nextValue()
+    }
+}
+
+
 

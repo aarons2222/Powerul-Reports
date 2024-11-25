@@ -16,32 +16,53 @@ struct ThemeRankingCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-//                Image(systemName: "list.bullet")
-//                    .font(.title2)
-                   // .foregroundColor(.green)
+
                 Text("Top Themes")
-                    .font(.headline)
+                    .font(.title3)
+                    .fontWeight(.regular)
+                    .foregroundColor(.color4)
                 Spacer()
+                
+                Image(systemName: "plus.circle")
+                    .font(.title2)
+                    .foregroundColor(.color1)
             }
+            .padding(.bottom, 20)
             
-            Spacer()
+            
             
             ForEach(Array(themes.enumerated()), id: \.1.0) { index, theme in
                 HStack {
                     Text("\(index + 1)")
+                        .foregroundStyle(.gray)
+                        .padding(.trailing, 8)
                     
                     Text(theme.0)
-                        .lineLimit(1)
+                        .foregroundStyle(.color4)
                 }
-                .font(.caption)
+              
+                .font(.body)
             }
         }
         .padding()
-        .frame(height: 200)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-        )
+        .cardBackground()
+
+    }
+}
+
+
+
+struct CardBackground: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .background(.color0.opacity(0.3))
+            .cornerRadius(20)
+            .shadow(color: .color4.opacity(0.05), radius: 4)
+    }
+}
+
+extension View {
+    func cardBackground() -> some View {
+        modifier(CardBackground())
     }
 }

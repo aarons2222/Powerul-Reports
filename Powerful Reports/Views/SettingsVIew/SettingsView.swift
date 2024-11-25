@@ -8,10 +8,16 @@
 import SwiftUI
 
 struct SettingsView: View {
+
+    
     var body: some View {
        
         VStack{
-            CustomHeaderVIew(title: "Settings", showBackButton: false)
+            CustomHeaderVIew(title: "Settings")
+            
+            
+
+           
             
             Spacer()
         }

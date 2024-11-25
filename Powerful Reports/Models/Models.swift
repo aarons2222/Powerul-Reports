@@ -9,8 +9,11 @@
 import Foundation
 import SwiftUI
 
-// Main model for inspection reports
-struct Report: Identifiable, Codable {
+
+
+
+
+struct Report: Identifiable, Codable, Hashable {
     let id: String
     let date: String
     let inspector: String
@@ -22,22 +25,54 @@ struct Report: Identifiable, Codable {
     let themes: [Theme]
     let typeOfProvision: String
     let timestamp: Timestamp
+    
+    // Hashable implementation
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(date)
+        hasher.combine(inspector)
+        hasher.combine(localAuthority)
+        hasher.combine(outcome)
+        hasher.combine(previousInspection)
+        hasher.combine(ratings)
+        hasher.combine(referenceNumber)
+        hasher.combine(themes)
+        hasher.combine(typeOfProvision)
+        hasher.combine(timestamp)
+    }
+    
+    // Equatable implementation (required for Hashable)
+    static func == (lhs: Report, rhs: Report) -> Bool {
+        return lhs.id == rhs.id &&
+            lhs.date == rhs.date &&
+            lhs.inspector == rhs.inspector &&
+            lhs.localAuthority == rhs.localAuthority &&
+            lhs.outcome == rhs.outcome &&
+            lhs.previousInspection == rhs.previousInspection &&
+            lhs.ratings == rhs.ratings &&
+            lhs.referenceNumber == rhs.referenceNumber &&
+            lhs.themes == rhs.themes &&
+            lhs.typeOfProvision == rhs.typeOfProvision &&
+            lhs.timestamp == rhs.timestamp
+    }
 }
 
+
+
 // Model for ratings
-struct Rating: Codable {
+struct Rating: Codable, Hashable {
     let category: String
     let rating: String
 }
 
 // Model for themes identified in the inspection
-struct Theme: Codable {
+struct Theme: Codable, Hashable {
     let frequency: Int
     let topic: String
 }
 
 // Model for timestamp
-struct Timestamp: Codable {
+struct Timestamp: Codable, Hashable {
     let _seconds: Int64
     let _nanoseconds: Int64
     
@@ -70,7 +105,7 @@ extension Report {
     }
 }
 
-
+//// CHARTCOLOURS
 
 // An enum for rating categories
 enum RatingCategory: String, CaseIterable {
@@ -91,10 +126,10 @@ enum RatingValue: String, CaseIterable {
     
     var color: Color {
         switch self {
-        case .outstanding: return .green
+        case .outstanding: return .color7
         case .good: return .color1
-        case .requiresImprovement: return .orange
-        case .inadequate: return .red
+        case .requiresImprovement: return .color5
+        case .inadequate: return .color8
         case .none: return .gray
         }
     }
@@ -106,19 +141,12 @@ enum RatingValue: String, CaseIterable {
 
 
 enum TimeFilter: String, Codable, CaseIterable {
-    case last30Days = "30days"
-    case last3Months = "3months"
-    case last6Months = "6months"
-    case last12Months = "12months"
+    case last30Days = "30 Days"
+    case last3Months = "3 Months"
+    case last6Months = "6 Months"
+    case last12Months = "1 Year"
     
-    var title: String {
-        switch self {
-        case .last30Days: "30 Days"
-        case .last3Months: "3 Months"
-        case .last6Months: "6 Months"
-        case .last12Months: "12 Months"
-        }
-    }
+
     
     var date: Date {
         let calendar = Calendar.current

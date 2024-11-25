@@ -12,7 +12,7 @@ struct CustomHeaderVIew: View {
     @Environment(\.presentationMode) var presentationMode
 
     var title: String
-    var showBackButton: Bool
+
     
     var body: some View {
         
@@ -40,17 +40,18 @@ struct CustomHeaderVIew: View {
                 Spacer()
                 
                 HStack{
-                    if(showBackButton){
+             
                         
                         Button{
                             presentationMode.wrappedValue.dismiss()
                         }label: {
                             Image(systemName: "chevron.backward.circle.fill")
-                                .font(.largeTitle)
+                                .font(.title)
+                                .fontWeight(.regular)
                                 .foregroundStyle(.white)
                                 .opacity(0.6)
                         }
-                    }
+                    
                     
                     
                  
@@ -61,16 +62,7 @@ struct CustomHeaderVIew: View {
                     
                     Spacer()
                     
-                    if(!showBackButton){
-                        Button{
-                            presentationMode.wrappedValue.dismiss()
-                        }label: {
-                            Image(systemName: "multiply.circle.fill")
-                                .font(.largeTitle)
-                                .foregroundStyle(.white)
-                                .opacity(0.6)
-                        }
-                    }
+                 
                 }
                 
             }
@@ -83,5 +75,5 @@ struct CustomHeaderVIew: View {
 }
 
 #Preview {
-    CustomHeaderVIew(title: "Hello", showBackButton: true)
+    CustomHeaderVIew(title: "Hello")
 }

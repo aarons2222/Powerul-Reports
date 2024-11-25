@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct AreaProfile: Identifiable {
     let id = UUID()
@@ -26,7 +27,9 @@ struct AreaInformation: Identifiable {
 struct AllAreas: View {
     let reports: [Report]
     
-    @Environment(\.presentationMode) private var presentationMode
+    
+    @Environment(\.dismiss) private var presentationMode
+
     
     @State private var animateGradient: Bool = false
     
@@ -51,6 +54,7 @@ struct AllAreas: View {
                 }
             }
         }
+        
         
         let provisionTypes = Dictionary(grouping: areaReports) { $0.typeOfProvision }
             .mapValues { $0.count }
@@ -88,70 +92,151 @@ struct AllAreas: View {
         }
     }
     
-    var body: some View {
-        
-        
-        
-        
-        
-        VStack(alignment: .leading, spacing: 8) {
-            
-            CustomHeaderVIew(title: "All Areas", showBackButton: false)
-
-            
-            
-            ScrollView {
-                LazyVStack(spacing: 16, pinnedViews: [.sectionHeaders]) {
-                    ForEach(Array(groupedAreaData.keys.sorted()), id: \.self) { letter in
-                        Section {
-                            ForEach(groupedAreaData[letter] ?? []) { item in
-                                NavigationLink(destination: AreaView(area: getAreaProfile(name: item.name), reports: reports)) {
-                                    HStack(alignment: .center) {
-                                        Text(item.name)
-                                            .font(.callout)
-                                            .foregroundStyle(.color4)
-                                        Spacer()
-                                        Text("\(item.count)")
-                                            .font(.subheadline)
-                                        
-                                    }
-                                    .padding()
-                                    .background(Color.color1.opacity(0.4))
-                                    .cornerRadius(10)
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                            }
-                        } header: {
-                            ZStack {
-                                Rectangle()
-                                    .fill(Color.white)
-                                    .ignoresSafeArea()
-                                
-                                Text(letter)
-                                    .font(.title3)
-                                    .padding(.horizontal, 12)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .foregroundStyle(.color4)
-                            }
-                            
-                        }                        }
-                }
-                .padding(.horizontal)
-            }
-            .scrollIndicators(.hidden)
-            .padding(.bottom)
-            .background(.clear)
-            .navigationBarHidden(true)
-            
+    @State private var searchText = ""
+    private var filteredAreaData: [String: [AreaInformation]] {
+        if searchText.isEmpty {
+            return groupedAreaData
         }
-        .ignoresSafeArea()
         
+        let filteredData = groupedAreaData.flatMap { _, areas in
+            areas.filter { area in
+                area.name.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+        
+        // Regroup filtered results by first letter
+        return Dictionary(grouping: filteredData) {
+            String($0.name.prefix(1)).uppercased()
+        }
     }
     
     
+    init(reports: [Report]){
+        self.reports = reports
+        print("Logger: AllAreas")
+
+    }
+     
+     var body: some View {
     
+             VStack(alignment: .leading, spacing: 0) {
+                 CustomHeaderVIew(title: "Local Authorities")
+                 
+   
+                 
+                 SearchBar(searchText: $searchText, placeHolder: "Search areas...")
+                 
+                 
+                 if filteredAreaData.isEmpty {
+                     
+                     HStack {
+                         Spacer()
+                         
+                         VStack{
+                           
+                             
+                             
+                             Text("Area not found")
+                                 .font(.title)
+                                 .foregroundStyle(.color2)
+                         }
+                         Spacer()
+                     }
+                     .padding(.top, 30)
+                   Spacer()
+                     
+                     
+            
+                                
+                 }else{
+                     
+                     ScrollView {
+                         LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+                             ForEach(Array(filteredAreaData.keys.sorted()), id: \.self) { letter in
+                                 Section {
+                                     ForEach(filteredAreaData[letter] ?? []) { item in
+                                         NavigationLink(destination: AreaView(area: getAreaProfile(name: item.name), reports: reports)) {
+                                             HStack(alignment: .center) {
+                                                 Text(item.name)
+                                                     .font(.callout)
+                                                     .foregroundStyle(.color4)
+                                                 Spacer()
+                                                 Text("\(item.count)")
+                                                     .font(.subheadline)
+                                             }
+                                             .padding()
+                                             .background(Color.color1.opacity(0.4))
+                                             .cornerRadius(10)
+                                         }
+                                         .buttonStyle(PlainButtonStyle())
+                                         .padding(.bottom, 16)
+                                     }
+                                 } header: {
+                                     ZStack {
+                                         Rectangle()
+                                             .fill(Color.white)
+                                             .ignoresSafeArea()
+                                         
+                                         VStack {
+                                             Spacer()
+                                             Text(letter)
+                                                 .font(.title3)
+                                                 .padding(.horizontal, 12)
+                                                 .frame(maxWidth: .infinity, alignment: .leading)
+                                                 .foregroundStyle(.color4)
+                                             Spacer()
+                                         }
+                                         .frame(height: 40)
+                                     }
+                                 }
+                             }
+                         }
+                         .padding(.horizontal)
+                     }
+                     .scrollIndicators(.hidden)
+                     .padding(.bottom)
+                     .background(.clear)
+                   
+                     
+                     
+                 }
+                 
+             }
+             .ignoresSafeArea()
+             .navigationBarHidden(true)
+
+     }
+ }
+
+
+struct SearchBar: View {
+    @Binding var searchText: String
+    var placeHolder: String
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.color3.opacity(0.7))
+                
+                TextField(placeHolder, text: $searchText)
+                    .autocorrectionDisabled()
+                    .accentColor(.color3.opacity(0.7))
+              
+                
+                if !searchText.isEmpty {
+                    Button(action: {
+                        searchText = ""
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.color3.opacity(0.3))
+                    }
+                }
+            }
+            .padding(12)
+            .background(.color0.opacity(0.2))
+            .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+        }
+        .background(.color0.opacity(0.1))
+    }
 }
-
-
-
-
