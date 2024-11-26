@@ -44,6 +44,8 @@ struct AllInspectors: View {
         )
     }
     
+
+    
     private var groupedInspectorData: [String: [InstpectorData]] {
         let inspectorCounts = Dictionary(grouping: reports) { $0.inspector }
             .mapValues { $0.count }
@@ -85,7 +87,7 @@ struct AllInspectors: View {
             CustomHeaderVIew(title: "Inspectors")
             
             
-            SearchBar(searchText: $searchText, placeHolder: "Search Inspectors...")
+            SearchBar(searchText: $searchText, placeHolder: "Search \(Set(reports.map { $0.inspector }).count) Inspectors...")
             
             if filteredInspectorData.isEmpty {
                 HStack {
@@ -115,10 +117,11 @@ struct AllInspectors: View {
                                                    .foregroundStyle(.color4)
                                                Spacer()
                                                Text("\(item.count)")
-                                                   .font(.subheadline)
+                                                   .font(.body)
+                                                   .foregroundColor(.gray)
                                            }
                                            .padding()
-                                           .background(Color.color1.opacity(0.4))
+                                           .background(.color0.opacity(0.3))
                                            .cornerRadius(10)
                                        }
                                        .buttonStyle(PlainButtonStyle())

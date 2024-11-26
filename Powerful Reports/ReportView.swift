@@ -17,11 +17,13 @@ struct ReportView: View {
     }
     var body: some View {
         
-        VStack(alignment: .leading, spacing: 0) {
+
+     
             
-            CustomHeaderVIew(title: report.referenceNumber)
-            
-            VStack(spacing: 20) {
+            VStack(spacing: 0) {
+                
+                
+                CustomHeaderVIew(title: report.referenceNumber)
                 
                 ScrollView {
                     CardView("Report Information") {
@@ -38,6 +40,7 @@ struct ReportView: View {
                             }
                         }
                     }
+                    .padding(.bottom)
                     
                     CardView("Grade") {
                         if (!report.outcome.isEmpty) {
@@ -51,11 +54,12 @@ struct ReportView: View {
                                         Text(rating.rating)
                                             .foregroundColor(RatingValue(rawValue: rating.rating)?.color ?? .gray)
                                     }
-                                    .padding(.vertical, 4)
+                                    .padding(.bottom, 4)
                                 }
                             }
                         }
                     }
+                    .padding(.bottom)
                     
                     CardView("Themes") {
                         VStack(alignment: .leading, spacing: 8) {
@@ -65,14 +69,22 @@ struct ReportView: View {
                             }
                         }
                     }
+                    .padding(.bottom)
                 }
+                .scrollIndicators(.hidden)
                 .padding()
+                
+                
+                
             }
-        }
+        
             .ignoresSafeArea()
             .navigationBarHidden(true)
     }
 }
+
+
+
 
 struct CardView<Content: View>: View {
     let title: String
@@ -83,18 +95,25 @@ struct CardView<Content: View>: View {
         self.content = content()
     }
     
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .font(.headline)
-                .padding(.bottom, 5)
+    var body: some View{
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+
+                Text(title)
+                    .font(.title3)
+                    .fontWeight(.regular)
+                    .foregroundColor(.color4)
+                Spacer()
+                
+              
+            }
+            .padding(.bottom, 20)
+            
+            
             
             content
         }
         .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.systemBackground))
-        .cornerRadius(10)
-        .shadow(radius: 2)
+        .cardBackground()
     }
 }

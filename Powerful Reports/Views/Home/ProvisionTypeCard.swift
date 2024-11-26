@@ -14,7 +14,10 @@ struct ProvisionTypeCard: View {
     @StateObject private var chartTwoObserver = VisibilityObserver(id: "chart2")
     var viewModel: InspectionReportsViewModel
     
+    
     @State private var animationAmount: CGFloat = 0
+    
+    
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -44,19 +47,17 @@ struct ProvisionTypeCard: View {
             .monitorVisibility(chartTwoObserver)
             
             ForEach(data) { item in
-                if item.outcome != "empty" {
-                    HStack {
-                        Image(systemName: "largecircle.fill.circle")
-                            .font(.body)
-                            .foregroundStyle(item.color)
-                        Text(item.outcome)
-                            .font(.body)
-                            .foregroundColor(.color4)
-                        Spacer()
-                        Text("\(viewModel.calculatePercentage(item.count))%")
-                            .font(.body)
-                            .foregroundColor(.gray)
-                    }
+                HStack {
+                    Image(systemName: "largecircle.fill.circle")
+                        .font(.body)
+                        .foregroundStyle(item.color)
+                    Text(item.outcome)
+                        .font(.body)
+                        .foregroundColor(.color4)
+                    Spacer()
+                    Text("\(viewModel.calculatePercentage(count: item.count, forProvisionData: data), specifier: "%.1f")%")
+                        .font(.footnote)
+                        .foregroundColor(.gray)
                 }
             }
         }

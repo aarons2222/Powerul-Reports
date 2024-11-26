@@ -87,7 +87,7 @@ struct InspectorProfileView: View {
                     }
                        } header: {
 
-                                  Text("Recent Reviews")
+                                  Text("Recent Reports")
                             } footer: {
 
                                 HStack{
@@ -181,15 +181,15 @@ struct InspectorProfileView: View {
                 
                 .padding()
                 
-                
+              
             }
-            
+            .listRowBackground(Color.green)
         }
         .ignoresSafeArea()
         .navigationBarHidden(true)
         
         
-       
+ 
     }
     
     func calculatePercentage(_ count: Int) -> Int {

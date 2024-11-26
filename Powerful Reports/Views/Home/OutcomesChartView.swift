@@ -4,39 +4,33 @@
 //
 //  Created by Aaron Strickland on 19/11/2024.
 //
+
+
 import SwiftUI
 import Charts
 
 struct OutcomesChartView: View {
     let reports: [Report]
+    var viewModel: InspectionReportsViewModel
+    
     @State private var animationPhase: Double = 0
+    @State private var displayData: [OutcomeData] = []
     @State private var previousData: [OutcomeData] = []
     @State private var isAnimating = false
-    @State private var displayData: [OutcomeData] = []
-    @State private var hasInitialized = false
+    @State private var legendOpacities: [String: Double] = [:]
+
     
-    var viewModel: InspectionReportsViewModel
-
-
-    var outcomeData: [OutcomeData] {
-        // Process each report to exactly one outcome
+    private var outcomeData: [OutcomeData] {
         let processedReports = reports.map { report -> (String, Color) in
-            // Check for Met/Not Met outcome first
             if !report.outcome.isEmpty {
-                return (report.outcome, report.outcome == "Met" ? .yellow : .red)
+                return (report.outcome, report.outcome == "Met" ? .color2 : .color6)
+            } else if let overallRating = report.ratings.first(where: { $0.category == RatingCategory.overallEffectiveness.rawValue }),
+                      let ratingValue = RatingValue(rawValue: overallRating.rating) {
+                return (overallRating.rating, ratingValue.color)
             }
-            // If no Met/Not Met, then it must have an Overall Effectiveness rating
-            else if let overallRating = report.ratings.first(where: { $0.category == RatingCategory.overallEffectiveness.rawValue }) {
-                if let ratingValue = RatingValue(rawValue: overallRating.rating) {
-                    return (overallRating.rating, ratingValue.color)
-                }
-            }
-            
-            // This should never happen as each report must have one or the other
             return ("Unknown", .gray)
         }
         
-        // Count frequencies and sort
         let outcomeCounts = Dictionary(grouping: processedReports) { $0.0 }
         return outcomeCounts.map { outcome, reports in
             OutcomeData(
@@ -46,135 +40,122 @@ struct OutcomesChartView: View {
             )
         }.sorted { $0.count > $1.count }
     }
-
     
- 
-    @State private var appear = false
-    
-    
-    
-    
-    /// CHART ANIMATION
-
-    private func startInitialAnimation() {
-        displayData = outcomeData
-        previousData = outcomeData
-        animationPhase = 0
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            withAnimation(.spring(duration: 0.6)) {
-                animationPhase = 1
-            }
-        }
+    private func calculatePercentage(_ count: Int) -> Double {
+        let total = displayData.reduce(0) { $0 + $1.count }
+        guard total > 0 else { return 0 }
+        let percentage = Double(count) / Double(total) * 100
+        return (percentage * 10).rounded() / 10
     }
     
-    private func handleDataChange() {
-        guard !isAnimating else { return }
-        guard !previousData.isEmpty else { return }
-        
-        isAnimating = true
-        previousData = displayData
-        
-        // Break animation into two phases
-        animatePhaseOne {
-            animatePhaseTwo()
-        }
-    }
     
-    private func animatePhaseOne(completion: @escaping () -> Void) {
-        withAnimation(.linear(duration: 0.6)) {
-            animationPhase = 0
-        } completion: {
-            displayData = outcomeData
-            completion()
-        }
-    }
     
-    private func animatePhaseTwo() {
-        withAnimation(.linear(duration: 0.6)) {
-            animationPhase = 1
-        } completion: {
-            isAnimating = false
-        }
-    }
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-           
                 Text("Inspection Outcomes")
                     .font(.title3)
                     .fontWeight(.regular)
                     .foregroundColor(.color4)
-            
+                
                 Spacer()
+                
                 Image(systemName: "plus.circle")
                     .font(.title2)
                     .foregroundColor(.color1)
             }
             .padding(.bottom, 20)
-    
             
-      
-
             Chart(displayData) { data in
-                            SectorMark(
-                                angle: .value("Count", Double(data.count) * animationPhase),
-                                innerRadius: 70,
-                                angularInset: 1
-                            )
-                            .cornerRadius(5)
-                            .foregroundStyle(data.color)
-                        }
-                        .frame(height: 250)
-                        .onDisappear {
-                            withAnimation(.linear(duration: 0.6)) {
-                                animationPhase = 0
-                            }
-                        }
-                        .onAppear {
-                            startInitialAnimation()
-                        }
-                        .onChange(of: outcomeData) {
-                            handleDataChange()
-                        }
-            
-            
-            
-            
-            
-
-            VStack(alignment: .leading, spacing: 4) {
-                ForEach(outcomeData) { data in
-                    HStack {
-                        Image(systemName: "largecircle.fill.circle")
-                            .font(.body)
-                            .foregroundStyle(data.color)
-                            .transition(.slide)
-                        
-                        Text(data.outcome)
-                            .font(.body)
-                            .foregroundColor(.color4)
-                            .transition(.slide)
-                        
-                        Spacer()
-                        
-                        Text("\(viewModel.calculatePercentage(data.count))%")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                            .transition(.slide)
-                    }
-                    .animation(.easeInOut(duration: 0.6), value: outcomeData)
-                }
+                SectorMark(
+                    angle: .value("Count", Double(data.count) * animationPhase),
+                    innerRadius: 70,
+                    angularInset: 1
+                )
+                .cornerRadius(5)
+                .foregroundStyle(data.color)
             }
-            .animation(.easeInOut(duration: 0.6), value: outcomeData.count)
-            .padding(.top, 8)
+            .frame(height: 250)
             
-        }
-        .padding()
-        .cardBackground()
-    }
-
-}
+            VStack(alignment: .leading, spacing: 4) {
+                       ForEach(Array(displayData.enumerated()), id: \.element.id) { index, data in
+                           HStack {
+                               Image(systemName: "largecircle.fill.circle")
+                                   .font(.body)
+                                   .foregroundStyle(data.color)
+                               
+                               Text(data.outcome)
+                                   .font(.body)
+                                   .foregroundColor(.color4)
+                               
+                               Spacer()
+                               
+                               Text("\(calculatePercentage(data.count), specifier: "%.1f")%")
+                                   .font(.footnote)
+                                   .foregroundColor(.gray)
+                           }
+                           .opacity(legendOpacities[data.outcome, default: 0])
+                           .offset(y: legendOpacities[data.outcome, default: 0] == 0 ? 20 : 0)
+                       }
+                   }
+                   .padding(.top, 8)
+               }
+               .padding()
+               .cardBackground()
+               .onAppear {
+                   displayData = outcomeData
+                   previousData = outcomeData
+                   
+                   // Animate chart
+                   DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                       withAnimation(.spring(duration: 0.6)) {
+                           animationPhase = 1
+                       }
+                   }
+                   
+                   // Animate legend items with staggered delay
+                   for (index, item) in displayData.enumerated() {
+                       DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.1 + 0.3) {
+                           withAnimation(.spring(duration: 0.6)) {
+                               legendOpacities[item.outcome] = 1
+                           }
+                       }
+                   }
+               }
+               .onChange(of: outcomeData) {
+                   guard !isAnimating else { return }
+                   
+                   isAnimating = true
+                   previousData = displayData
+                   
+                   // Reset legend opacities
+                   for item in displayData {
+                       legendOpacities[item.outcome] = 0
+                   }
+                   
+                   withAnimation(.linear(duration: 0.6)) {
+                       animationPhase = 0
+                   } completion: {
+                       displayData = outcomeData
+                       
+                       // Animate new legend items
+                       for (index, item) in displayData.enumerated() {
+                           DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.1) {
+                               withAnimation(.spring(duration: 0.6)) {
+                                   legendOpacities[item.outcome] = 1
+                               }
+                           }
+                       }
+                       
+                       withAnimation(.linear(duration: 0.6)) {
+                           animationPhase = 1
+                       } completion: {
+                           isAnimating = false
+                       }
+                   }
+               }
+           }
+       }
 
 

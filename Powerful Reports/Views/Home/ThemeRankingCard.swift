@@ -10,9 +10,7 @@ import SwiftUI
 
 struct ThemeRankingCard: View {
     let themes: [(String, Int)]
-    
-    
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {

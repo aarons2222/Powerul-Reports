@@ -15,24 +15,17 @@ struct HomeView: View {
         @Namespace var hero
         @StateObject private var viewModel = InspectionReportsViewModel()
     
-        @AppStorage("selectedTimeFilter") private var selectedTimeFilter: TimeFilter = .last30Days
-    @Environment(\.colorScheme) private var scheme
+        @Environment(\.colorScheme) private var scheme
     
     
           @State var showSettings = false
     
+    @AppStorage("selectedTimeFilter") private var selectedTimeFilter: TimeFilter = .last30Days
+
     
     
-        var filteredReports: [Report] {
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "dd/MM/yyyy"
     
-            return viewModel.reports.filter { report in
-                guard let reportDate = dateFormatter.date(from: report.date) else { return false }
-                return reportDate >= selectedTimeFilter.date
-            }
-        }
-    
+
     
         @Environment(\.horizontalSizeClass) var sizeClass
         var gridColumns: [GridItem] {
@@ -46,45 +39,45 @@ struct HomeView: View {
     
     
     
-        private var provisionTypeDistribution: [OutcomeData] {
-            let types = viewModel.reports.map { $0.typeOfProvision }
-                            
-         
+    private var provisionTypeDistribution: [OutcomeData] {
+        // Add a debug print to see what's coming in
+        print("Filtered reports_count: \(viewModel.filteredReports.count)")
+        print("All reports_count: \(viewModel.reports.count)")
+        print("Unique types: \(Set(viewModel.filteredReports.map { $0.typeOfProvision }))")
+        
+        let types = viewModel.filteredReports.map { $0.typeOfProvision }
+        let counts = Dictionary(grouping: types) { $0 }
+            .mapValues { $0.count }
+        
+        // Add a debug print to see the counts
+        print("Counts dictionary: \(counts)")
+        
+        return counts.map { type, count in
+            let displayType = type.isEmpty ? "Not Specified" : type
             
+            let color: Color = if type.contains("Childminder") {
+                .color1
+            } else if type.contains("non-") {
+                .color6
+            } else if type.contains("childcare on domestic") {
+                .color5
+            } else {
+                .color7
+            }
             
-            
-            let counts = Dictionary(grouping: types) { $0 }
-                .mapValues { $0.count }
-    
-            return counts.map { type, count in
-    
-                let displayType = type.isEmpty ? "Not Specified" : type
-    
-
-                let color: Color = if type.contains("Childminder") {
-                    .color1
-                } else if type.contains("non-") {
-                    .color6
-                }else if  type.contains("childcare on domestic") {
-                    .color5
-                } else {
-                    .color7
-                }
-    
-                return OutcomeData(
-                    outcome: displayType,
-                    count: count,
-                    color: color
-                )
-            }.sorted { $0.count > $1.count }
-        }
-    
+            return OutcomeData(
+                outcome: displayType,
+                count: count,
+                color: color
+            )
+        }.sorted { $0.count > $1.count }
+    }
     
     
     
     
     private func getTheThemes(amount: Int?) -> [(String, Int)] {
-        let allThemes = viewModel.reports.flatMap { $0.themes }
+        let allThemes = viewModel.filteredReports.flatMap { $0.themes }
         var themeCounts: [String: Int] = [:]
         
         allThemes.forEach { theme in
@@ -171,7 +164,7 @@ struct HomeView: View {
                         activeTab: $selectedTimeFilter,
                         height: 35,
                         extraText: nil,
-                        font: .subheadline,
+                        font: .callout,
                         activeTint: .color2,
                         inActiveTint: .color4.opacity(0.8)
                     ) { size in
@@ -182,21 +175,30 @@ struct HomeView: View {
                             .offset(y: 2)
                             .frame(maxHeight: .infinity, alignment: .bottom)
                     }
-                    .padding(.horizontal, 0)
+                    .padding(.horizontal)
+                    .onChange(of: selectedTimeFilter) {
+                                                print("Filter changed to: \(selectedTimeFilter)")  // Debug print
+                                                Task {
+                                                    await viewModel.filterReports(timeFilter: selectedTimeFilter)
+                                                }
+                                            }
+                   
+                    
+                    
                     
                     ScrollView {
                
                         NavigationLink {
-                            AnnualStats(viewModel: viewModel)
-                                .navigationTransition(.zoom(sourceID: filteredReports.first?.outcome, in: hero))
+                            AnnualStats(allReports: viewModel.reports)
+                                .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.outcome, in: hero))
                             
                             
                         } label: {
-                            OutcomesChartView(reports: filteredReports, viewModel: viewModel)
-                            .padding(.bottom, 5)
+                            OutcomesChartView(reports: viewModel.filteredReports, viewModel: viewModel)
+                                .padding(.bottom)
                         }
                         .buttonStyle(PlainButtonStyle())
-                        .matchedTransitionSource(id: filteredReports.first?.outcome, in: hero)
+                        .matchedTransitionSource(id: viewModel.filteredReports.first?.outcome, in: hero)
                             
                        
                             
@@ -206,43 +208,46 @@ struct HomeView: View {
                             
                             NavigationLink {
                                 AllInspectors(reports: viewModel.reports)
-                                    .navigationTransition(.zoom(sourceID: filteredReports.first?.inspector, in: hero))
+                                    .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.inspector, in: hero))
                                 
                                 
                             } label: {
-                                TopInspectorsCard(reports: filteredReports)
-                                    .padding(5)
+                                TopInspectorsCard(reports: viewModel.filteredReports)
+                                    .padding(.bottom)
+                              
                             }
                             .buttonStyle(PlainButtonStyle())
-                            .matchedTransitionSource(id: filteredReports.first?.inspector, in: hero)
+                            .matchedTransitionSource(id: viewModel.filteredReports.first?.inspector, in: hero)
                             
                             
                             
                             
                             NavigationLink {
                                 AllAreas(reports: viewModel.reports)
-                                    .navigationTransition(.zoom(sourceID: filteredReports.first?.localAuthority, in: hero))
+                                    .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.localAuthority, in: hero))
                                 
                                 
                             } label: {
-                                TopAreasCard(reports: filteredReports)
-                                    .padding(5)
+                                TopAreasCard(reports: viewModel.filteredReports)
+                                    .padding(.bottom)
                             }
                             .buttonStyle(PlainButtonStyle())
-                            .matchedTransitionSource(id: filteredReports.first?.localAuthority, in: hero)
+                            .matchedTransitionSource(id: viewModel.filteredReports.first?.localAuthority, in: hero)
                             
                             
                             
                             NavigationLink {
                               
-                                
+                                ThemesView()
+                                    .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.themes, in: hero))
+
                                 
                             } label: {
                                 ThemeRankingCard(themes: getTheThemes(amount: 5))
-                                    .padding(5)
+                                    .padding(.bottom)
                             }
                             .buttonStyle(PlainButtonStyle())
-                            .matchedTransitionSource(id: filteredReports.first?.themes, in: hero)
+                            .matchedTransitionSource(id: viewModel.filteredReports.first?.themes, in: hero)
                             
                        
                     
@@ -284,6 +289,23 @@ struct HomeView: View {
             }
             .padding(.vertical, 15)
         }
+            
+        .navigationDestination(for: NavigationDestination.self) { destination in
+                        switch destination {
+                        case .annualStats:
+                            AnnualStats(allReports: viewModel.reports)
+                                .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.outcome, in: hero))
+                        case .allInspectors:
+                            AllInspectors(reports: viewModel.reports)
+                                .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.inspector, in: hero))
+                        case .allAreas:
+                            AllAreas(reports: viewModel.reports)
+                                .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.localAuthority, in: hero))
+                        case .themes:
+                            ThemesView()
+                                .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.themes, in: hero))
+                        }
+                    }
         .scrollIndicators(.hidden)
         .scrollTargetBehavior(CustomScrollBehaviour())
             
@@ -295,6 +317,12 @@ struct HomeView: View {
 
      
     }
+        .onAppear {
+                    // Initialize filtering with current filter
+                    Task {
+                        await viewModel.filterReports(timeFilter: selectedTimeFilter)
+                    }
+                }
       
         
     }
@@ -378,22 +406,18 @@ struct CustomScrollBehaviour: ScrollTargetBehavior {
 
 
 
-
 struct OutcomeData: Identifiable, Equatable {
     let id = UUID()
     let outcome: String
     let count: Int
     let color: Color
-    
     var isAnimated: Bool = false
     
- 
-        static func == (lhs: OutcomeData, rhs: OutcomeData) -> Bool {
-            return lhs.id == rhs.id && lhs.id == rhs.id
-            // ... compare other properties
-        }
+    static func == (lhs: OutcomeData, rhs: OutcomeData) -> Bool {
+        return lhs.outcome == rhs.outcome &&
+               lhs.count == rhs.count
     }
-
+}
 
 
 
@@ -488,3 +512,9 @@ fileprivate struct SizeKey: PreferenceKey {
 
 
 
+enum NavigationDestination: Hashable {
+    case annualStats
+    case allInspectors
+    case allAreas
+    case themes
+}

@@ -1,50 +1,91 @@
 import SwiftUI
 import Firebase
 
+
+
 class InspectionReportsViewModel: ObservableObject {
     @Published var reports: [Report] = []
+    @Published private(set) var filteredReports: [Report] = []
+    @Published private(set) var provisionTypeDistribution: [OutcomeData] = []
+
+    // Caching structures
+    private var reportsByInspector: [String: [Report]] = [:]
+    private var reportsByAuthority: [String: [Report]] = [:]
+    private var reportsByDate: [String: [Report]] = [:]
+
     
+    private let cacheQueue = DispatchQueue(label: "com.app.datecache")
+    private var dateCache: [String: Date] = [:]
     
-    
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd MMMM yyyy"
+        return formatter
+    }()
     private var db = Firestore.firestore()
     private var listener: ListenerRegistration?
     
     @AppStorage("reportCount") var reportsCount: Int = 0
     private let reportsCacheKey = "cachedInspectionReports"
-    
-    @AppStorage("isTrial") var isTrial: Bool = false
+    @State var isTrial = false
+
     
     init() {
         if isTrial {
-            // Use dummy data for trial mode
-            self.reports = InspectionReportsViewModel.dummyReports
+            // MARK: - Usage Example
+        self.reports = DummyDataGenerator.generateDummyReports(count: 500)
+            self.filteredReports = self.reports
             self.reportsCount = self.reports.count
+            
+            Task { @MainActor in
+                await buildCaches()
+                self.filteredReports = self.reports
+             
+            }
         } else {
-            // Use real data for non-trial mode
             loadCachedReports()
             fetchReports()
         }
     }
     
-    // Load cached reports data from UserDefaults
-    private func loadCachedReports() {
-        if isTrial {
-            return // Don't load cache in trial mode
+    // MARK: - Cache Management
+    
+    private func buildCaches() async {
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                self.reportsByInspector = Dictionary(grouping: self.reports) { $0.inspector }
+            }
+            
+            group.addTask {
+                self.reportsByAuthority = Dictionary(grouping: self.reports) { $0.localAuthority }
+            }
+            
+            group.addTask {
+                self.reportsByDate = Dictionary(grouping: self.reports) { $0.date }
+            }
         }
+    }
+    
+    // MARK: - Data Persistence
+    
+    private func loadCachedReports() {
+        if isTrial { return }
         
         if let savedData = UserDefaults.standard.data(forKey: reportsCacheKey) {
             let decoder = JSONDecoder()
             if let decodedReports = try? decoder.decode([Report].self, from: savedData) {
                 self.reports = decodedReports
+                Task { @MainActor in
+                    await buildCaches()
+                    self.filteredReports = self.reports
+                    await updateProvisionTypeDistribution()
+                }
             }
         }
     }
     
-    // Save reports data to UserDefaults
     private func cacheReports() {
-        if isTrial {
-            return // Don't cache in trial mode
-        }
+        if isTrial { return }
         
         let encoder = JSONEncoder()
         if let encoded = try? encoder.encode(reports) {
@@ -52,10 +93,10 @@ class InspectionReportsViewModel: ObservableObject {
         }
     }
     
+    // MARK: - Firebase Integration
+    
     func fetchReports() {
-        if isTrial {
-            return // Don't fetch from Firebase in trial mode
-        }
+        if isTrial { return }
         
         print("Fetching Reports")
         
@@ -74,7 +115,6 @@ class InspectionReportsViewModel: ObservableObject {
             
             let newReports = documents.compactMap { document -> Report? in
                 let data = document.data()
-               // print("Raw Firestore Data: \(data)")
                 
                 let ratingsData = data["ratings"] as? [[String: Any]] ?? []
                 let ratings = ratingsData.map { ratingData in
@@ -122,212 +162,202 @@ class InspectionReportsViewModel: ObservableObject {
                 self.cacheReports()
                 print("Reports updated. Total count: \(self.reports.count)")
                 
-                
+                Task { @MainActor in
+                    await self.buildCaches()
+                    self.filteredReports = self.reports
+                    await self.updateProvisionTypeDistribution()
+                }
             } else {
                 print("No changes in reports.")
             }
         }
     }
     
-    // Helper methods remain unchanged as they work with both real and dummy data
+ 
+    func filterReports(timeFilter: TimeFilter) async {
+        let filterDate = timeFilter.date
+        print("Total reports before filtering: \(reports.count)")
+        print("Filter date: \(filterDate)")
+        
+        let filtered = await withTaskGroup(of: [Report].self, body: { group -> [Report] in
+            let chunkSize = 1000
+            let chunks = stride(from: 0, to: reports.count, by: chunkSize).map {
+                Array(reports[$0..<min($0 + chunkSize, reports.count)])
+            }
+            
+            for (index, chunk) in chunks.enumerated() {
+                group.addTask {
+                    let filteredChunk = chunk.filter { report in
+                        self.cacheQueue.sync {
+                            // Handle date ranges by taking the second date (end date)
+                            let dateComponents = report.date.components(separatedBy: " - ")
+                            let dateString = dateComponents.count > 1
+                                ? dateComponents[1].trimmingCharacters(in: .whitespaces)
+                                : report.date.trimmingCharacters(in: .whitespaces)
+                            
+                            guard let reportDate = self.dateFormatter.date(from: dateString) else {
+                                print("Failed to parse date: \(report.date)")
+                                return false
+                            }
+                            return reportDate >= filterDate
+                        }
+                    }
+                    return filteredChunk
+                }
+            }
+            
+            var results: [Report] = []
+            for await chunkResult in group {
+                results.append(contentsOf: chunkResult)
+            }
+            
+            return results.sorted { $0.date > $1.date }
+        })
+        
+        await MainActor.run {
+            self.filteredReports = filtered
+            Task {
+                await self.updateProvisionTypeDistribution()
+            }
+        }
+    }
+ 
+    
+//    func filterReports(timeFilter: TimeFilter) async {
+//        let filterDate = timeFilter.date
+//        print("Filtering reports for \(timeFilter)")
+//        
+//        let filtered = await withTaskGroup(of: [Report].self) { group in
+//            let chunkSize = 1000
+//            let chunks = stride(from: 0, to: reports.count, by: chunkSize).map {
+//                Array(reports[$0..<min($0 + chunkSize, reports.count)])
+//            }
+//            
+//            for chunk in chunks {
+//                group.addTask {
+//                    return chunk.filter { report in
+//                        // Get or create date from cache
+//                        let reportDate: Date? = self.cacheQueue.sync {
+//                            if let cached = self.dateCache[report.date] {
+//                                return cached
+//                            }
+//                            
+//                            if let date = self.dateFormatter.date(from: report.date) {
+//                                self.dateCache[report.date] = date
+//                                return date
+//                            }
+//                            
+//                            return nil
+//                        }
+//                        
+//                        guard let date = reportDate else { return false }
+//                        return date >= filterDate
+//                    }
+//                }
+//            }
+//            
+//            var results: [Report] = []
+//            for await chunkResult in group {
+//                results.append(contentsOf: chunkResult)
+//            }
+//            return results.sorted { $0.date > $1.date }
+//        }
+//        
+//        await MainActor.run {
+//            self.filteredReports = filtered
+//            Task {
+//                await self.updateProvisionTypeDistribution()
+//            }
+//        }
+//    }
+    
+
+     
+    // MARK: - Filtering and Data Access
+    
+ 
+    
     func getTotalReportsCount() -> Int {
         return reports.count
     }
     
+    func getInstpectorCount() -> Int{
+        let uniqueInspectors = Set(reports.map { $0.inspector })
+        return uniqueInspectors.count
+    }
+    
+
+
+    
+
+    
+    
     func getReportsByRating(_ rating: String) -> [Report] {
-        return reports.filter { report in
+        return filteredReports.filter { report in
             report.ratings.contains { $0.rating == rating }
         }
     }
     
     func getMostCommonThemes(limit: Int = 10) -> [(String, Int)] {
-        let allThemes = reports.flatMap { $0.themes }
         var themeCounts: [String: Int] = [:]
-        allThemes.forEach { theme in
-            themeCounts[theme.topic, default: 0] += theme.frequency
+        
+        // Process in chunks for better performance
+        let chunkSize = 1000
+        for i in stride(from: 0, to: filteredReports.count, by: chunkSize) {
+            let endIndex = min(i + chunkSize, filteredReports.count)
+            let chunk = filteredReports[i..<endIndex]
+            
+            chunk.forEach { report in
+                report.themes.forEach { theme in
+                    themeCounts[theme.topic, default: 0] += theme.frequency
+                }
+            }
         }
+        
         return themeCounts.sorted { $0.value > $1.value }
             .prefix(limit)
             .map { ($0.key, $0.value) }
     }
     
     func getReportsByLocalAuthority(_ authority: String) -> [Report] {
-        return reports.filter { $0.localAuthority == authority }
+        reportsByAuthority[authority] ?? []
     }
     
-    deinit {
-        listener?.remove()
-    }
-    
-    
-    
-    static let dummyReports: [Report] = [
-        Report(
-            id: "1",
-            date: "19 November 2024",
-            inspector: "Sarah Johnson",
-            localAuthority: "Kent",
-            outcome: "",
-            previousInspection: "Good",
-            ratings: [
-                Rating(category: "Overall effectiveness", rating: "Good"),
-                Rating(category: "The quality of education", rating: "Good"),
-                Rating(category: "Behaviour and attitudes", rating: "Outstanding"),
-                Rating(category: "Personal development", rating: "Good"),
-                Rating(category: "Leadership and management", rating: "Good")
-            ],
-            referenceNumber: "EY123456",
-            themes: [
-                Theme(frequency: 8, topic: "Children's Behaviour"),
-                Theme(frequency: 7, topic: "Personal Development"),
-                Theme(frequency: 6, topic: "Parent Partnerships"),
-                Theme(frequency: 5, topic: "Mathematical Development"),
-                Theme(frequency: 4, topic: "Physical Development")
-            ],
-            typeOfProvision: "Childcare on non-domestic premises",
-            timestamp: Timestamp(_seconds: 1732028878, _nanoseconds: 686000000)
-        ),
-        Report(
-            id: "2",
-            date: "18 November 2024",
-            inspector: "Mark Wilson",
-            localAuthority: "Surrey",
-            outcome: "Met",
-            previousInspection: "Met",
-            ratings: [],
-            referenceNumber: "EY789012",
-            themes: [
-                Theme(frequency: 9, topic: "Safeguarding"),
-                Theme(frequency: 8, topic: "Staff Training"),
-                Theme(frequency: 7, topic: "Health and Safety"),
-                Theme(frequency: 6, topic: "Record Keeping"),
-                Theme(frequency: 5, topic: "Risk Assessment")
-            ],
-            typeOfProvision: "Childminder",
-            timestamp: Timestamp(_seconds: 1731942478, _nanoseconds: 686000000)
-        ),
-        Report(
-            id: "3",
-            date: "17 November 2024",
-            inspector: "Emma Thompson",
-            localAuthority: "Essex",
-            outcome: "Not Met",
-            previousInspection: "Met",
-            ratings: [],
-            referenceNumber: "EY345678",
-            themes: [
-                Theme(frequency: 8, topic: "Safeguarding Concerns"),
-                Theme(frequency: 7, topic: "Staff Documentation"),
-                Theme(frequency: 6, topic: "Policy Implementation"),
-                Theme(frequency: 5, topic: "Safety Measures"),
-                Theme(frequency: 4, topic: "Staff Qualifications")
-            ],
-            typeOfProvision: "Childcare on domestic premises",
-            timestamp: Timestamp(_seconds: 1731856078, _nanoseconds: 686000000)
-        ),
-        Report(
-            id: "4",
-            date: "16 November 2024",
-            inspector: "David Brown",
-            localAuthority: "Hampshire",
-            outcome: "",
-            previousInspection: "Good",
-            ratings: [
-                Rating(category: "Overall effectiveness", rating: "Requires improvement"),
-                Rating(category: "The quality of education", rating: "Requires improvement"),
-                Rating(category: "Behaviour and attitudes", rating: "Good"),
-                Rating(category: "Personal development", rating: "Good"),
-                Rating(category: "Leadership and management", rating: "Requires improvement")
-            ],
-            referenceNumber: "EY901234",
-            themes: [
-                Theme(frequency: 7, topic: "Quality Improvement"),
-                Theme(frequency: 6, topic: "Staff Development"),
-                Theme(frequency: 5, topic: "Child Assessment"),
-                Theme(frequency: 4, topic: "Learning Environment"),
-                Theme(frequency: 3, topic: "Parent Communication")
-            ],
-            typeOfProvision: "Childminder",
-            timestamp: Timestamp(_seconds: 1731769678, _nanoseconds: 686000000)
-        ),
-        Report(
-            id: "5",
-            date: "15 November 2024",
-            inspector: "Lisa Chen",
-            localAuthority: "Hertfordshire",
-            outcome: "Met",
-            previousInspection: "Not Met",
-            ratings: [],
-            referenceNumber: "EY567890",
-            themes: [
-                Theme(frequency: 9, topic: "Documentation Improvement"),
-                Theme(frequency: 8, topic: "Staff Supervision"),
-                Theme(frequency: 7, topic: "First Aid Requirements"),
-                Theme(frequency: 6, topic: "Safety Procedures"),
-                Theme(frequency: 5, topic: "Qualification Checks")
-            ],
-            typeOfProvision: "Childminder",
-            timestamp: Timestamp(_seconds: 1731683278, _nanoseconds: 686000000)
-        ),
-        Report(
-            id: "6",
-            date: "14 November 2024",
-            inspector: "James Miller",
-            localAuthority: "Suffolk",
-            outcome: "Not Met",
-            previousInspection: "Met",
-            ratings: [],
-            referenceNumber: "EY234567",
-            themes: [
-                Theme(frequency: 8, topic: "Missing Documentation"),
-                Theme(frequency: 7, topic: "Registration Requirements"),
-                Theme(frequency: 6, topic: "Premises Safety"),
-                Theme(frequency: 5, topic: "Staff Checks"),
-                Theme(frequency: 4, topic: "Policy Updates")
-            ],
-            typeOfProvision: "Childcare on domestic premises",
-            timestamp: Timestamp(_seconds: 1731596878, _nanoseconds: 686000000)
-        )
-    ]
-
-    
-    func calculatePercentage(_ count: Int) -> Int {
-         guard reports.count > 0 else { return 0 }
-         return Int(round(Double(count) / Double(reports.count) * 100))
-    }
-    
-    var provisionTypeDistribution: [OutcomeData] {
-        let types = reports.map { $0.typeOfProvision }
+    private func updateProvisionTypeDistribution() async {
+        let distribution = await withTaskGroup(of: [OutcomeData].self) { group in
+            let types = filteredReports.map { $0.typeOfProvision }
+            let counts = Dictionary(grouping: types) { $0 }
+                .mapValues { $0.count }
+            
+            let result = counts.map { type, count in
+                let displayType = type.isEmpty ? "Not Specified" : type
+                let color: Color = if type.contains("Childminder") {
+                    .color1
+                } else if type.contains("non-") {
+                    .color6
+                } else if type.contains("childcare on domestic") {
+                    .color5
+                } else {
+                    .color7
+                }
+                
+                return OutcomeData(
+                    outcome: displayType,
+                    count: count,
+                    color: color
+                )
+            }.sorted { $0.count > $1.count }
+            
+            return result
+        }
         
-        let counts = Dictionary(grouping: types) { $0 }
-            .mapValues { $0.count }
-
-        return counts.map { type, count in
-
-            let displayType = type.isEmpty ? "Not Specified" : type
-
-
-            let color: Color = if type.contains("Childminder") {
-                .color1
-            } else if type.contains("non-") {
-                .color6
-            }else if  type.contains("childcare on domestic") {
-                .color5
-            } else {
-                .color7
-            }
-
-            return OutcomeData(
-                outcome: displayType,
-                count: count,
-                color: color
-            )
-        }.sorted { $0.count > $1.count }
+        await MainActor.run {
+            self.provisionTypeDistribution = distribution
+        }
     }
     
-    
-     func getInspectorProfile(name: String) -> InspectorProfile {
-        let inspectorReports = reports.filter { $0.inspector == name }
+    func getInspectorProfile(name: String) -> InspectorProfile {
+        let inspectorReports = reportsByInspector[name] ?? []
         
         let areas = Dictionary(grouping: inspectorReports) { $0.localAuthority }
             .mapValues { $0.count }
@@ -351,8 +381,59 @@ class InspectionReportsViewModel: ObservableObject {
             grades: allGrades
         )
     }
+
     
+    
+    private func getFilteredTotalCount(for data: [OutcomeData]) -> Int {
+          // Use the data passed to the view which is already filtered
+          return data.reduce(0) { $0 + $1.count }
+      }
+
+    
+//    
+//    func calculatePercentage(_ count: Int) -> Double {
+//        guard filteredReports.count > 0 else { return 0.0 }
+//        
+//    
+//        let percentage = (Double(count) / Double(filteredReports.count)) * 100
+//        return floor(percentage * 10) / 10
+//    }
+//    
+//    
+//    
+//    func calculateProvisionPercentage(_ count: Int, in data: [OutcomeData]) -> Double {
+//        let totalCount = getFilteredTotalCount(for: data)
+//        guard totalCount > 0 else { return 0.0 }
+//        
+//        let percentage = (Double(count) / Double(totalCount)) * 100
+//        return floor(percentage * 10) / 10
+//    }
+
+    func calculatePercentage(count: Int, forProvisionData data: [OutcomeData]? = nil) -> Double {
+        let totalCount: Int
+        if let data = data {
+            totalCount = getFilteredTotalCount(for: data)
+        } else {
+            totalCount = filteredReports.count
+        }
+        
+        guard totalCount > 0 else { return 0.0 }
+        
+        let percentage = (Double(count) / Double(totalCount)) * 100
+        return floor(percentage * 10) / 10
+    }
+    
+    
+    deinit {
+        listener?.remove()
+    }
+    
+    // Your existing dummy data
+    static let dummyReports: [Report] = [
+        // ... your existing dummy reports ...
+    ]
 }
+
 
 
  extension Calendar {

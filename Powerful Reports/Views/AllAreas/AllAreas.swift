@@ -122,9 +122,9 @@ struct AllAreas: View {
              VStack(alignment: .leading, spacing: 0) {
                  CustomHeaderVIew(title: "Local Authorities")
                  
-   
+                
                  
-                 SearchBar(searchText: $searchText, placeHolder: "Search areas...")
+                 SearchBar(searchText: $searchText, placeHolder: "Search \(Set(reports.map { $0.localAuthority }).count) Local Authorities...")
                  
                  
                  if filteredAreaData.isEmpty {
@@ -162,10 +162,11 @@ struct AllAreas: View {
                                                      .foregroundStyle(.color4)
                                                  Spacer()
                                                  Text("\(item.count)")
-                                                     .font(.subheadline)
+                                                     .font(.body)
+                                                     .foregroundColor(.gray)
                                              }
                                              .padding()
-                                             .background(Color.color1.opacity(0.4))
+                                             .background(.color0.opacity(0.3))
                                              .cornerRadius(10)
                                          }
                                          .buttonStyle(PlainButtonStyle())
@@ -217,11 +218,12 @@ struct SearchBar: View {
         HStack(spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.color3.opacity(0.7))
+                    .font(.body)
+                    .foregroundStyle(.color3.opacity(0.9))
                 
                 TextField(placeHolder, text: $searchText)
                     .autocorrectionDisabled()
-                    .accentColor(.color3.opacity(0.7))
+                    .accentColor(.color3.opacity(0.9))
               
                 
                 if !searchText.isEmpty {
@@ -234,7 +236,7 @@ struct SearchBar: View {
                 }
             }
             .padding(12)
-            .background(.color0.opacity(0.2))
+            .foregroundStyle(.color4)
             .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
         }
         .background(.color0.opacity(0.1))

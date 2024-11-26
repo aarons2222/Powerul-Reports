@@ -71,6 +71,7 @@ struct TopInspectorsCard: View {
         }
         .padding()
         .cardBackground()
+        
     }
 }
 

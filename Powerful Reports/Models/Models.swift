@@ -122,6 +122,8 @@ enum RatingValue: String, CaseIterable {
     case good = "Good"
     case requiresImprovement = "Requires improvement"
     case inadequate = "Inadequate"
+    case met = "Met"
+    case notmet = "Not Met"
     case none = ""
     
     var color: Color {
@@ -130,6 +132,8 @@ enum RatingValue: String, CaseIterable {
         case .good: return .color1
         case .requiresImprovement: return .color5
         case .inadequate: return .color8
+        case .met: return .color2
+        case .notmet: return .color6
         case .none: return .gray
         }
     }
