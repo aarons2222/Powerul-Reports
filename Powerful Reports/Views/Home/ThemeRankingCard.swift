@@ -54,7 +54,7 @@ struct CardBackground: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background(.color0.opacity(0.3))
-            .cornerRadius(20)
+            .cornerRadius(25)
             .shadow(color: .color4.opacity(0.05), radius: 4)
     }
 }

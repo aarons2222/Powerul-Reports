@@ -132,6 +132,9 @@ struct HomeView: View {
                         /// Card View
                         ScrollView(.horizontal) {
                             LazyHStack(spacing: 0) {
+                                
+                                
+                                
                                 ZStack {
                                     if minY == 75.0 {
                                         /// Not Scrolled
@@ -191,7 +194,7 @@ struct HomeView: View {
                         
                         
                         
-                        /// all stats
+                     
                                        Button {
                                            path.append(.annualStats)
                                        } label: {
@@ -247,8 +250,17 @@ struct HomeView: View {
                                             ProvisionTypeCard(data: provisionTypeDistribution, viewModel: viewModel)
                                                 .padding(.bottom)
                                         }
+                                       
+                        
+                        
+                        
+                                        GlobalButton(title: "All Reports", action: {
+                                            Task{
+                                                path.append(.allReports)
+                                            }
+                                        })
                                         .buttonStyle(PlainButtonStyle())
-                                        .matchedTransitionSource(id: viewModel.filteredReports.first?.previousInspection, in: hero)
+                                        .matchedTransitionSource(id: viewModel.filteredReports.first?.overallRating, in: hero)
                         
                                      
                                    }
@@ -315,6 +327,10 @@ struct HomeView: View {
                         ProvisionInformation(reports: viewModel.reports)
                             .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.previousInspection, in: hero))
                         
+                    case .allReports:
+                        AllReportsView(viewModel: viewModel, path: $path)
+                            .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.overallRating, in: hero))
+                        
                         
                         
                         /// child views
@@ -323,10 +339,18 @@ struct HomeView: View {
                         
                     case .areaProfile(let name):
                         AreaView(area: getAreaProfile(name: name), reports: viewModel.reports, path: $path)
+                    
+                    
+                    
+                    case .reportView(let report):
+                        ReportView(report: report)
+
+                                       
+                                  
                         
                         
-                        
-                 
+                     
+            
                     }
             
         
@@ -501,4 +525,7 @@ enum NavigationPath: Hashable {
     case areas
     case themes
     case provisionInformation
+    case allReports
+    case reportView(Report)
+    
 }

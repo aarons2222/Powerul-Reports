@@ -125,39 +125,6 @@ struct AreaView: View {
                             }
                         }
                     }
-                    
-                    
-//                    
-//                    Chart(gradePercentages, id: \.grade) { item in
-//                                              SectorMark(
-//                                                  angle: .value("Count", item.count),
-//                                                  innerRadius: .ratio(0.6),
-//                                                  angularInset: 1
-//                                              )
-//                                              .cornerRadius(5)
-//                                              .foregroundStyle(by: .value("Grade", item.grade))
-//                                          }
-//                                          .chartForegroundStyleScale(domain: gradePercentages.map { $0.grade },
-//                                                                   range: gradePercentages.map { getColor(for: $0.grade) })
-//                                          .frame(height: 200)
-//                                          .chartLegend(position: .bottom)
-//                                          
-//                                          VStack(alignment: .leading, spacing: 8) {
-//                                              ForEach(gradePercentages, id: \.grade) { item in
-//                                             
-//                                                  HStack {
-//                                                      
-//                                                      Image(systemName: "largecircle.fill.circle")
-//                                                          .font(.body)
-//                                                          .foregroundStyle(getColor(for: item.grade))
-//                                                      Text(item.grade)
-//                                                          .foregroundColor(.color4)
-//                                                      Spacer()
-//                                                      Text("\(item.percent)%")
-//                                                          .foregroundColor(.gray)
-//                                                  }
-//                                              }
-//                                          }
                 }
                 
                 
@@ -194,6 +161,7 @@ struct AreaView: View {
                 
                 CardView("Inspectors") {
                     VStack(alignment: .leading, spacing: 8) {
+                        
                         ForEach(Array(area.inspectors.sorted(by: { $0.key < $1.key })), id: \.key) { inspector, count in
                             Button {
                                 path.append(.inspectorProfile(inspector))

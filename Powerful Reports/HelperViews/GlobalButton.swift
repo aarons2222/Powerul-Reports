@@ -29,7 +29,7 @@ struct GlobalButton: View {
                 .padding(.vertical, verticalPadding)
                 .frame(maxWidth: .infinity)
                 .background(backgroundColor)
-                .clipShape(Capsule())
+                .clipShape(RoundedRectangle(cornerRadius: 25))
         }
         .padding(.vertical, 24)
     

@@ -19,6 +19,8 @@ struct ThemesView: View {
             
             Spacer()
         }
+        .ignoresSafeArea()
+        .navigationBarHidden(true)
     }
 }
 

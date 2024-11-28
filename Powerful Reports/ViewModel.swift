@@ -59,12 +59,97 @@ class InspectionReportsViewModel: ObservableObject {
             group.addTask {
                 self.reportsByAuthority = Dictionary(grouping: self.reports) { $0.localAuthority }
             }
-            
+            å
             group.addTask {
                 self.reportsByDate = Dictionary(grouping: self.reports) { $0.date }
             }
         }
     }
+    
+    
+    
+    
+    
+    @Published private(set) var groupedReports: [String: [Report]] = [:]
+    @Published private(set) var sortedDates: [String] = []
+    private var currentPage = 0
+    private let pageSize = 20
+    private var hasMoreData = true
+    
+    // Keep track of the current filter to know when to reset
+    private var currentTimeFilter: TimeFilter = .last30Days
+    
+    func loadMoreContentIfNeeded(currentDate: String?) {
+        guard let currentDate = currentDate,
+              let currentIndex = sortedDates.firstIndex(of: currentDate),
+              currentIndex == sortedDates.count - 3, // Load more when near the end
+              hasMoreData else {
+            return
+        }
+        
+        loadNextPage()
+    }
+    
+    private func loadNextPage() {
+        // Simulate pagination with existing data
+        let start = currentPage * pageSize
+        let end = min(start + pageSize, reports.count)
+        
+        guard start < reports.count else {
+            hasMoreData = false
+            return
+        }
+        
+        let newReports = Array(reports[start..<end])
+        processNewReports(newReports)
+        currentPage += 1
+    }
+    
+    private func processNewReports(_ newReports: [Report]) {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "dd/MM/yyyy"
+        
+        let filteredNewReports = newReports.filter { report in
+            guard let reportDate = dateFormatter.date(from: report.date) else { return false }
+            return reportDate >= currentTimeFilter.date
+        }
+        
+        let newGrouped = Dictionary(grouping: filteredNewReports) { $0.date }
+        
+        DispatchQueue.main.async {
+            // Merge new reports with existing ones
+            for (date, reports) in newGrouped {
+                if var existing = self.groupedReports[date] {
+                    existing.append(contentsOf: reports)
+                    self.groupedReports[date] = existing
+                } else {
+                    self.groupedReports[date] = reports
+                }
+            }
+            
+            // Update sorted dates
+            self.sortedDates = self.groupedReports.keys.sorted { date1, date2 in
+                guard let date1 = DateFormatter.reportDate.date(from: date1),
+                      let date2 = DateFormatter.reportDate.date(from: date2) else {
+                    return false
+                }
+                return date1 > date2
+            }
+        }
+    }
+    
+    func resetAndReload(timeFilter: TimeFilter) {
+        currentTimeFilter = timeFilter
+        groupedReports.removeAll()
+        sortedDates.removeAll()
+        currentPage = 0
+        hasMoreData = true
+        loadNextPage()
+    }
+
+    
+    
+    
     
     // MARK: - Data Persistence
     
@@ -456,3 +541,5 @@ class InspectionReportsViewModel: ObservableObject {
         return formatter.string(from: self)
     }
 }
+
+
