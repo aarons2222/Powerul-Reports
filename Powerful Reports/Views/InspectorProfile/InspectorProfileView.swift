@@ -51,7 +51,7 @@ struct InspectorProfileView: View {
             
             CustomHeaderVIew(title: profile.name)
             
-            List {
+            ScrollView {
                 
                 Section(header: Text("Overview")) {
                     LabeledContent("Total Inspections", value: "\(profile.totalInspections)")
@@ -60,77 +60,67 @@ struct InspectorProfileView: View {
                 
                 
                 
-                Section {
-                             
-                    
+                
+                
+                CardView("Recent Reports",
+                         navigationLink: recentReports.count > 5 ?
+                           AnyView(
+                             NavigationLink(
+                               destination: MoreReportsView(reports: recentReports, name: profile.name),
+                               label: {
+                                 Image(systemName: "plus.circle")
+                                   .font(.title2)
+                                   .foregroundColor(.color1)
+                               }
+                             )
+                           ) : nil) {
                     ForEach(Array(recentReports.prefix(5))) { report in
-                        
-                        
                         NavigationLink {
                             ReportView(report: report)
                         } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(report.referenceNumber)
-                                    .font(.headline)
-                                Text(report.date)
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
-                                Text(report.overallRating ?? report.outcome)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                          
+                            ReportCard(report: report)
                         }
                         .padding(.vertical, 4)
-                     
-                  
-                    }
-                       } header: {
-
-                                  Text("Recent Reports")
-                            } footer: {
-
-                                HStack{
-                                    Spacer()
-                                    if (recentReports.count > 5){
-                                        NavigationLink {
-                                            MoreReportsView(reports: recentReports, name: profile.name)
-                                        } label: {
-                                            Text("See all reports")
-                                        }
-                                    }
-                                }
+                        
+                        if report != recentReports.prefix(5).last {
+                            Divider()
                         }
-                
-                
-             
-                
-       
-                Section(header: Text("Areas Covered")) {
-                    ForEach(Array(profile.areas.keys.sorted()), id: \.self) { area in
-                        LabeledContent(area, value: "\(profile.areas[area] ?? 0)")
                     }
                 }
-                
-                
-                ForEach(statistics.topThemes.prefix(10), id: \.topic) { themeFreq in
-                       HStack {
-                           Text(themeFreq.topic)
-                           Spacer()
-                           Text("\(themeFreq.count)")
-                               .foregroundColor(.secondary)
-                     
-                       }
-                   }
+            
+                                      
+                .padding(.bottom)
+       
                 
                 
                 
                 
                 
+                CardView("Local Authorities Inspected") {
+                        ForEach(Array(profile.areas.keys.sorted()), id: \.self) { area in
+                            LabeledContent(area, value: "\(profile.areas[area] ?? 0)")
+                        }
+                }
+                .padding(.bottom)
+             
                 
-                /// totdo
                 
-                Section(header: Text("Grades")) {
+                
+                CardView("Popular themes") {
+                    ForEach(statistics.topThemes.prefix(10), id: \.topic) { themeFreq in
+                        HStack {
+                            Text(themeFreq.topic)
+                            Spacer()
+                            Text("\(themeFreq.count)")
+                                .foregroundColor(.secondary)
+                            
+                        }
+                    }
+                }
+                .padding(.bottom)
+         
+                    
+                    CardView("Grades") {
                     Chart {
                         ForEach(Array(profile.grades), id: \.key) { grade, count in
                             SectorMark(
@@ -162,31 +152,23 @@ struct InspectorProfileView: View {
                     }
                 }
                 
-                
-                
-                
-                Button(action: {
-                    generatePDF()
-                }) {
-                    HStack {
-                        Image(systemName: "doc.fill")
-                        Text("Generate PDF Report")
+                GlobalButton(title: "Generate PDF Report", action: {
+                    Task {
+                        generatePDF()
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                }
+                })
                 
-                .padding()
+          
                 
               
             }
-            .listRowBackground(Color.green)
+            .scrollIndicators(.hidden)
+            .padding()
         }
+     
         .ignoresSafeArea()
         .navigationBarHidden(true)
+     
         
         
  

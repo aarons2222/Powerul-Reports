@@ -18,29 +18,28 @@ struct MoreReportsView: View {
             
             CustomHeaderVIew(title: "All reports for \(name)")
             
-            List{
+            ScrollView{
+                
             ForEach(Array(reports)) { report in
                 
                 
                     
                     NavigationLink {
                         ReportView(report: report)
+                        
+                   
                     } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(report.referenceNumber)
-                                .font(.headline)
-                            Text(report.date)
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
-                            Text(report.overallRating ?? report.outcome)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
+                        
+                        ReportCard(report: report)
+                    
                     }
                     .padding(.vertical, 4)
                     
-                    
+                if report != reports.last {
+                    Divider()
                 }
+            }
+                
             }
             .scrollIndicators(.hidden)
             
