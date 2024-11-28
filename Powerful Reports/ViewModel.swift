@@ -59,7 +59,7 @@ class InspectionReportsViewModel: ObservableObject {
             group.addTask {
                 self.reportsByAuthority = Dictionary(grouping: self.reports) { $0.localAuthority }
             }
-            å
+            
             group.addTask {
                 self.reportsByDate = Dictionary(grouping: self.reports) { $0.date }
             }

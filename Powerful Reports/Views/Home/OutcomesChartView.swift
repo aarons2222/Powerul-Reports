@@ -108,7 +108,7 @@ struct OutcomesChartView: View {
                    previousData = outcomeData
                    
                    // Animate chart
-                   DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                   DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                        withAnimation(.spring(duration: 0.6)) {
                            animationPhase = 1
                        }
