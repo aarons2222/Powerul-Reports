@@ -7,40 +7,64 @@ class InspectionReportsViewModel: ObservableObject {
     @Published var reports: [Report] = []
     @Published private(set) var filteredReports: [Report] = []
     @Published private(set) var provisionTypeDistribution: [OutcomeData] = []
-
+    @Published private(set) var groupedReports: [String: [Report]] = [:]
+    @Published private(set) var sortedDates: [String] = []
+    
     // Caching structures
     private var reportsByInspector: [String: [Report]] = [:]
     private var reportsByAuthority: [String: [Report]] = [:]
     private var reportsByDate: [String: [Report]] = [:]
 
-    
-    private let cacheQueue = DispatchQueue(label: "com.app.datecache")
-    private var dateCache: [String: Date] = [:]
-    
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd MMMM yyyy"
+        formatter.calendar = Calendar.current
+        formatter.timeZone = TimeZone.current
         return formatter
     }()
     private var db = Firestore.firestore()
     private var listener: ListenerRegistration?
     
-    @AppStorage("reportCount") var reportsCount: Int = 0
-    private let reportsCacheKey = "cachedInspectionReports"
+    private(set) var reportsCount: Int = 0
+    private(set) var selectedTimeFilter: String = TimeFilter.last30Days.rawValue
+    
+    private let cacheDirectory: URL? = {
+        let directory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("Reports")
+        
+        // Create directory if it doesn't exist
+        if let directory = directory {
+            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        }
+        
+        return directory
+    }()
+    
+    private var reportsCacheFile: URL? {
+        cacheDirectory?.appendingPathComponent("reports_cache.json")
+    }
+    
+    private var metadataCacheFile: URL? {
+        cacheDirectory?.appendingPathComponent("metadata_cache.json")
+    }
+    
+    private var currentPage = 0
+    private let pageSize = 20
+    private var hasMoreData = true
     @State var isTrial = false
-
+    
+    // Keep track of the current filter to know when to reset
+    private var currentTimeFilter: TimeFilter = .last30Days
     
     init() {
         if isTrial {
-            // MARK: - Usage Example
-        self.reports = DummyDataGenerator.generateDummyReports(count: 500)
+            self.reports = DummyDataGenerator.generateDummyReports(count: 500)
             self.filteredReports = self.reports
             self.reportsCount = self.reports.count
             
             Task { @MainActor in
                 await buildCaches()
-                self.filteredReports = self.reports
-             
+                await updateProvisionTypeDistribution()
             }
         } else {
             loadCachedReports()
@@ -66,115 +90,44 @@ class InspectionReportsViewModel: ObservableObject {
         }
     }
     
-    
-    
-    
-    
-    @Published private(set) var groupedReports: [String: [Report]] = [:]
-    @Published private(set) var sortedDates: [String] = []
-    private var currentPage = 0
-    private let pageSize = 20
-    private var hasMoreData = true
-    
-    // Keep track of the current filter to know when to reset
-    private var currentTimeFilter: TimeFilter = .last30Days
-    
-    func loadMoreContentIfNeeded(currentDate: String?) {
-        guard let currentDate = currentDate,
-              let currentIndex = sortedDates.firstIndex(of: currentDate),
-              currentIndex == sortedDates.count - 3, // Load more when near the end
-              hasMoreData else {
-            return
-        }
-        
-        loadNextPage()
-    }
-    
-    private func loadNextPage() {
-        // Simulate pagination with existing data
-        let start = currentPage * pageSize
-        let end = min(start + pageSize, reports.count)
-        
-        guard start < reports.count else {
-            hasMoreData = false
-            return
-        }
-        
-        let newReports = Array(reports[start..<end])
-        processNewReports(newReports)
-        currentPage += 1
-    }
-    
-    private func processNewReports(_ newReports: [Report]) {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "dd/MM/yyyy"
-        
-        let filteredNewReports = newReports.filter { report in
-            guard let reportDate = dateFormatter.date(from: report.date) else { return false }
-            return reportDate >= currentTimeFilter.date
-        }
-        
-        let newGrouped = Dictionary(grouping: filteredNewReports) { $0.date }
-        
-        DispatchQueue.main.async {
-            // Merge new reports with existing ones
-            for (date, reports) in newGrouped {
-                if var existing = self.groupedReports[date] {
-                    existing.append(contentsOf: reports)
-                    self.groupedReports[date] = existing
-                } else {
-                    self.groupedReports[date] = reports
-                }
-            }
-            
-            // Update sorted dates
-            self.sortedDates = self.groupedReports.keys.sorted { date1, date2 in
-                guard let date1 = DateFormatter.reportDate.date(from: date1),
-                      let date2 = DateFormatter.reportDate.date(from: date2) else {
-                    return false
-                }
-                return date1 > date2
-            }
-        }
-    }
-    
-    func resetAndReload(timeFilter: TimeFilter) {
-        currentTimeFilter = timeFilter
-        groupedReports.removeAll()
-        sortedDates.removeAll()
-        currentPage = 0
-        hasMoreData = true
-        loadNextPage()
-    }
-
-    
-    
-    
-    
     // MARK: - Data Persistence
     
     private func loadCachedReports() {
-        if isTrial { return }
+        guard let reportsCacheFile = reportsCacheFile else { return }
         
-        if let savedData = UserDefaults.standard.data(forKey: reportsCacheKey) {
-            let decoder = JSONDecoder()
-            if let decodedReports = try? decoder.decode([Report].self, from: savedData) {
-                self.reports = decodedReports
+        do {
+            if FileManager.default.fileExists(atPath: reportsCacheFile.path) {
+                let data = try Data(contentsOf: reportsCacheFile)
+                let decoder = JSONDecoder()
+                let cachedReports = try decoder.decode([Report].self, from: data)
+                self.reports = cachedReports
+                self.filteredReports = cachedReports
+                self.reportsCount = cachedReports.count
+                print("Loaded \(cachedReports.count) reports from cache")
+                
                 Task { @MainActor in
                     await buildCaches()
-                    self.filteredReports = self.reports
                     await updateProvisionTypeDistribution()
                 }
             }
+        } catch {
+            print("Error loading cached reports: \(error)")
         }
     }
     
-    private func cacheReports() {
-        if isTrial { return }
+    private func saveToCacheFile() {
+        guard let reportsCacheFile = reportsCacheFile else { return }
         
-        let encoder = JSONEncoder()
-        if let encoded = try? encoder.encode(reports) {
-            UserDefaults.standard.set(encoded, forKey: reportsCacheKey)
+        do {
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(reports)
+            try data.write(to: reportsCacheFile)
+            print("Saved \(reports.count) reports to cache")
+            
+            // Update metadata
+            self.reportsCount = reports.count
+        } catch {
+            print("Error saving reports to cache: \(error)")
         }
     }
     
@@ -244,7 +197,7 @@ class InspectionReportsViewModel: ObservableObject {
             if newIds != existingIds {
                 self.reports = newReports
                 self.reportsCount = self.reports.count
-                self.cacheReports()
+                self.saveToCacheFile()
                 print("Reports updated. Total count: \(self.reports.count)")
                 
                 Task { @MainActor in
@@ -258,46 +211,19 @@ class InspectionReportsViewModel: ObservableObject {
         }
     }
     
- 
     func filterReports(timeFilter: TimeFilter) async {
         let filterDate = timeFilter.date
         print("Total reports before filtering: \(reports.count)")
         print("Filter date: \(filterDate)")
         
-        let filtered = await withTaskGroup(of: [Report].self, body: { group -> [Report] in
-            let chunkSize = 1000
-            let chunks = stride(from: 0, to: reports.count, by: chunkSize).map {
-                Array(reports[$0..<min($0 + chunkSize, reports.count)])
+        let filtered = reports.filter { report in
+            let dateComponents = report.date.components(separatedBy: " - ")
+            let dateString = dateComponents.count > 1 ? dateComponents[1] : report.date
+            guard let reportDate = self.dateFormatter.date(from: dateString.trimmingCharacters(in: .whitespaces)) else {
+                return false
             }
-            
-            for (index, chunk) in chunks.enumerated() {
-                group.addTask {
-                    let filteredChunk = chunk.filter { report in
-                        self.cacheQueue.sync {
-                            // Handle date ranges by taking the second date (end date)
-                            let dateComponents = report.date.components(separatedBy: " - ")
-                            let dateString = dateComponents.count > 1
-                                ? dateComponents[1].trimmingCharacters(in: .whitespaces)
-                                : report.date.trimmingCharacters(in: .whitespaces)
-                            
-                            guard let reportDate = self.dateFormatter.date(from: dateString) else {
-                                print("Failed to parse date: \(report.date)")
-                                return false
-                            }
-                            return reportDate >= filterDate
-                        }
-                    }
-                    return filteredChunk
-                }
-            }
-            
-            var results: [Report] = []
-            for await chunkResult in group {
-                results.append(contentsOf: chunkResult)
-            }
-            
-            return results.sorted { $0.date > $1.date }
-        })
+            return reportDate >= filterDate
+        }
         
         await MainActor.run {
             self.filteredReports = filtered
@@ -306,108 +232,7 @@ class InspectionReportsViewModel: ObservableObject {
             }
         }
     }
- 
-    
-//    func filterReports(timeFilter: TimeFilter) async {
-//        let filterDate = timeFilter.date
-//        print("Filtering reports for \(timeFilter)")
-//        
-//        let filtered = await withTaskGroup(of: [Report].self) { group in
-//            let chunkSize = 1000
-//            let chunks = stride(from: 0, to: reports.count, by: chunkSize).map {
-//                Array(reports[$0..<min($0 + chunkSize, reports.count)])
-//            }
-//            
-//            for chunk in chunks {
-//                group.addTask {
-//                    return chunk.filter { report in
-//                        // Get or create date from cache
-//                        let reportDate: Date? = self.cacheQueue.sync {
-//                            if let cached = self.dateCache[report.date] {
-//                                return cached
-//                            }
-//                            
-//                            if let date = self.dateFormatter.date(from: report.date) {
-//                                self.dateCache[report.date] = date
-//                                return date
-//                            }
-//                            
-//                            return nil
-//                        }
-//                        
-//                        guard let date = reportDate else { return false }
-//                        return date >= filterDate
-//                    }
-//                }
-//            }
-//            
-//            var results: [Report] = []
-//            for await chunkResult in group {
-//                results.append(contentsOf: chunkResult)
-//            }
-//            return results.sorted { $0.date > $1.date }
-//        }
-//        
-//        await MainActor.run {
-//            self.filteredReports = filtered
-//            Task {
-//                await self.updateProvisionTypeDistribution()
-//            }
-//        }
-//    }
-    
 
-     
-    // MARK: - Filtering and Data Access
-    
- 
-    
-    func getTotalReportsCount() -> Int {
-        return reports.count
-    }
-    
-    func getInstpectorCount() -> Int{
-        let uniqueInspectors = Set(reports.map { $0.inspector })
-        return uniqueInspectors.count
-    }
-    
-
-
-    
-
-    
-    
-    func getReportsByRating(_ rating: String) -> [Report] {
-        return filteredReports.filter { report in
-            report.ratings.contains { $0.rating == rating }
-        }
-    }
-    
-    func getMostCommonThemes(limit: Int = 10) -> [(String, Int)] {
-        var themeCounts: [String: Int] = [:]
-        
-        // Process in chunks for better performance
-        let chunkSize = 1000
-        for i in stride(from: 0, to: filteredReports.count, by: chunkSize) {
-            let endIndex = min(i + chunkSize, filteredReports.count)
-            let chunk = filteredReports[i..<endIndex]
-            
-            chunk.forEach { report in
-                report.themes.forEach { theme in
-                    themeCounts[theme.topic, default: 0] += theme.frequency
-                }
-            }
-        }
-        
-        return themeCounts.sorted { $0.value > $1.value }
-            .prefix(limit)
-            .map { ($0.key, $0.value) }
-    }
-    
-    func getReportsByLocalAuthority(_ authority: String) -> [Report] {
-        reportsByAuthority[authority] ?? []
-    }
-    
     private func updateProvisionTypeDistribution() async {
         let distribution = await withTaskGroup(of: [OutcomeData].self) { group in
             let types = filteredReports.map { $0.typeOfProvision }
@@ -441,6 +266,51 @@ class InspectionReportsViewModel: ObservableObject {
         }
     }
     
+    func getFilteredTotalCount(for data: [OutcomeData]) -> Int {
+        // Use the data passed to the view which is already filtered
+        return data.reduce(0) { $0 + $1.count }
+    }
+    
+    func getTotalReportsCount() -> Int {
+        return reports.count
+    }
+    
+    func getInspectorCount() -> Int {
+        let uniqueInspectors = Set(reports.map { $0.inspector })
+        return uniqueInspectors.count
+    }
+    
+    func getReportsByRating(_ rating: String) -> [Report] {
+        return filteredReports.filter { report in
+            report.ratings.contains { $0.rating == rating }
+        }
+    }
+    
+    func getMostCommonThemes(limit: Int = 10) -> [(String, Int)] {
+        var themeCounts: [String: Int] = [:]
+        
+        // Process in chunks for better performance
+        let chunkSize = 1000
+        for i in stride(from: 0, to: filteredReports.count, by: chunkSize) {
+            let endIndex = min(i + chunkSize, filteredReports.count)
+            let chunk = filteredReports[i..<endIndex]
+            
+            chunk.forEach { report in
+                report.themes.forEach { theme in
+                    themeCounts[theme.topic, default: 0] += theme.frequency
+                }
+            }
+        }
+        
+        return themeCounts.sorted { $0.value > $1.value }
+            .prefix(limit)
+            .map { ($0.key, $0.value) }
+    }
+    
+    func getReportsByLocalAuthority(_ authority: String) -> [Report] {
+        reportsByAuthority[authority] ?? []
+    }
+    
     func getInspectorProfile(name: String) -> InspectorProfile {
         let inspectorReports = reportsByInspector[name] ?? []
         
@@ -466,34 +336,7 @@ class InspectionReportsViewModel: ObservableObject {
             grades: allGrades
         )
     }
-
     
-    
-    private func getFilteredTotalCount(for data: [OutcomeData]) -> Int {
-          // Use the data passed to the view which is already filtered
-          return data.reduce(0) { $0 + $1.count }
-      }
-
-    
-//    
-//    func calculatePercentage(_ count: Int) -> Double {
-//        guard filteredReports.count > 0 else { return 0.0 }
-//        
-//    
-//        let percentage = (Double(count) / Double(filteredReports.count)) * 100
-//        return floor(percentage * 10) / 10
-//    }
-//    
-//    
-//    
-//    func calculateProvisionPercentage(_ count: Int, in data: [OutcomeData]) -> Double {
-//        let totalCount = getFilteredTotalCount(for: data)
-//        guard totalCount > 0 else { return 0.0 }
-//        
-//        let percentage = (Double(count) / Double(totalCount)) * 100
-//        return floor(percentage * 10) / 10
-//    }
-
     func calculatePercentage(count: Int, forProvisionData data: [OutcomeData]? = nil) -> Double {
         let totalCount: Int
         if let data = data {
@@ -508,7 +351,151 @@ class InspectionReportsViewModel: ObservableObject {
         return floor(percentage * 10) / 10
     }
     
+    func loadMoreContentIfNeeded(currentDate: String?) {
+        guard let currentDate = currentDate,
+              let currentIndex = sortedDates.firstIndex(of: currentDate),
+              currentIndex == sortedDates.count - 3, // Load more when near the end
+              hasMoreData else {
+            return
+        }
+        
+        loadNextPage()
+    }
     
+    private func loadNextPage() {
+        // Simulate pagination with existing data
+        let start = currentPage * pageSize
+        let end = min(start + pageSize, reports.count)
+        
+        guard start < reports.count else {
+            hasMoreData = false
+            return
+        }
+        
+        let newReports = Array(reports[start..<end])
+        processNewReports(newReports)
+        currentPage += 1
+    }
+    
+    private func processNewReports(_ newReports: [Report]) {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "dd/MM/yyyy"
+        
+        // Performance: Process in background with chunks
+        DispatchQueue.global(qos: .userInitiated).async {
+            let filteredNewReports = newReports.filter { report in
+                guard let reportDate = dateFormatter.date(from: report.date) else { return false }
+                return reportDate >= self.currentTimeFilter.date
+            }
+            
+            let newGrouped = Dictionary(grouping: filteredNewReports) { $0.date }
+            
+            DispatchQueue.main.async {
+                // Merge new reports with existing ones
+                for (date, reports) in newGrouped {
+                    if var existing = self.groupedReports[date] {
+                        existing.append(contentsOf: reports)
+                        self.groupedReports[date] = existing
+                    } else {
+                        self.groupedReports[date] = reports
+                    }
+                }
+                
+                // Performance: Cache sorted dates result
+                self.sortedDates = self.groupedReports.keys.sorted { date1, date2 in
+                    guard let date1 = DateFormatter.reportDate.date(from: date1),
+                          let date2 = DateFormatter.reportDate.date(from: date2) else {
+                        return false
+                    }
+                    return date1 > date2
+                }
+            }
+        }
+    }
+    
+    func resetAndReload(timeFilter: TimeFilter) {
+        currentTimeFilter = timeFilter
+        groupedReports.removeAll()
+        sortedDates.removeAll()
+        currentPage = 0
+        hasMoreData = true
+        loadNextPage()
+    }
+    
+    func calculatePercentage(_ count: Int) -> Double {
+        guard filteredReports.count > 0 else { return 0.0 }
+        
+        let percentage = (Double(count) / Double(filteredReports.count)) * 100
+        return floor(percentage * 10) / 10
+    }
+    
+    func calculateProvisionPercentage(_ count: Int, in data: [OutcomeData]) -> Double {
+        let totalCount = getFilteredTotalCount(for: data)
+        guard totalCount > 0 else { return 0.0 }
+        
+        let percentage = (Double(count) / Double(totalCount)) * 100
+        return floor(percentage * 10) / 10
+    }
+    
+    func getReportsByDate(_ date: String) -> [Report] {
+        return reportsByDate[date] ?? []
+    }
+    
+    func getReportsByInspector(_ inspector: String) -> [Report] {
+        return reportsByInspector[inspector] ?? []
+    }
+    
+    func getUniqueInspectors() -> [String] {
+        return Array(Set(reports.map { $0.inspector })).sorted()
+    }
+    
+    func getUniqueAuthorities() -> [String] {
+        return Array(Set(reports.map { $0.localAuthority })).sorted()
+    }
+    
+    func getInspectorWorkload() -> [(String, Int)] {
+        let workloads = Dictionary(grouping: reports) { $0.inspector }
+            .mapValues { $0.count }
+        return workloads.sorted { $0.value > $1.value }
+    }
+    
+    func getAuthorityDistribution() -> [(String, Int)] {
+        let distribution = Dictionary(grouping: reports) { $0.localAuthority }
+            .mapValues { $0.count }
+        return distribution.sorted { $0.value > $1.value }
+    }
+    
+    func getRatingDistribution() -> [String: Int] {
+        var distribution: [String: Int] = [:]
+        reports.forEach { report in
+            if let overallRating = report.ratings.first(where: { $0.category == RatingCategory.overallEffectiveness.rawValue }) {
+                distribution[overallRating.rating, default: 0] += 1
+            }
+        }
+        return distribution
+    }
+    
+    func getThemeAnalysis() -> [(String, Double)] {
+        let themes = reports.flatMap { $0.themes }
+        let totalThemes = Double(themes.count)
+        let distribution = Dictionary(grouping: themes) { $0.topic }
+            .mapValues { themes in
+                let totalFrequency = Double(themes.reduce(0) { $0 + $1.frequency })
+                return (totalFrequency / totalThemes) * 100
+            }
+        return distribution.sorted { $0.value > $1.value }
+    }
+    
+    func searchReports(query: String) -> [Report] {
+        guard !query.isEmpty else { return [] }
+        let lowercasedQuery = query.lowercased()
+        return reports.filter { report in
+            report.inspector.lowercased().contains(lowercasedQuery) ||
+            report.localAuthority.lowercased().contains(lowercasedQuery) ||
+            report.typeOfProvision.lowercased().contains(lowercasedQuery) ||
+            report.themes.contains { $0.topic.lowercased().contains(lowercasedQuery) }
+        }
+    }
     
     deinit {
         listener?.remove()
@@ -541,5 +528,3 @@ class InspectionReportsViewModel: ObservableObject {
         return formatter.string(from: self)
     }
 }
-
-

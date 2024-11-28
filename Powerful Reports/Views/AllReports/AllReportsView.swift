@@ -16,26 +16,46 @@ struct AllReportsView: View {
     @AppStorage("selectedTimeFilter") private var selectedTimeFilter: TimeFilter = .last30Days
     @Binding var path: [NavigationPath]
     
+    // Track scroll position
+    @State private var scrollPosition: String?
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             CustomHeaderVIew(title: "All Reports")
             
-            ScrollView {
-                LazyVStack(spacing: 16, pinnedViews: [.sectionHeaders]) {
-                    ForEach(viewModel.sortedDates, id: \.self) { date in
-                        Section {
-                            ForEach(viewModel.groupedReports[date] ?? []) { report in
-                                ReportCardView(report: report, path: $path)
-                                    .onAppear {
-                                        viewModel.loadMoreContentIfNeeded(currentDate: date)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing: 16, pinnedViews: [.sectionHeaders]) {
+                        ForEach(viewModel.sortedDates, id: \.self) { date in
+                            Section {
+                                let reports = viewModel.groupedReports[date] ?? []
+                                LazyVStack(spacing: 8) {
+                                    ForEach(reports) { report in
+                                        ReportCardView(report: report, path: $path)
+                                            .id("\(date)-\(report.id)")
+                                            .onAppear {
+                                                if reports.last?.id == report.id {
+                                                    viewModel.loadMoreContentIfNeeded(currentDate: date)
+                                                }
+                                            }
                                     }
+                                }
+                            } header: {
+                                DateHeaderView(date: date)
+                                    .id(date)
                             }
-                        } header: {
-                            DateHeaderView(date: date)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                .scrollDismissesKeyboard(.immediately)
+                .onChange(of: scrollPosition) { newPosition in
+                    if let position = newPosition {
+                        withAnimation {
+                            proxy.scrollTo(position, anchor: .top)
                         }
                     }
                 }
-                .padding(.horizontal)
             }
         }
         .navigationBarHidden(true)
@@ -58,10 +78,13 @@ struct ReportCardView: View {
             CardView("Report: \(report.referenceNumber)") {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Inspector: \(report.inspector)")
+                        .lineLimit(1)
                     Text("Area: \(report.localAuthority)")
+                        .lineLimit(1)
                     if let overallRating = report.overallRating {
                         Text("Rating: \(overallRating)")
                             .foregroundColor(RatingValue(rawValue: overallRating)?.color ?? .gray)
+                            .lineLimit(1)
                     }
                 }
             }
