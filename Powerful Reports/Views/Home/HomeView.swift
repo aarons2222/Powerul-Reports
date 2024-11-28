@@ -24,7 +24,8 @@ struct HomeView: View {
 
     
     
-    
+    @State private var path = [NavigationPath]()
+
 
     
         @Environment(\.horizontalSizeClass) var sizeClass
@@ -40,17 +41,17 @@ struct HomeView: View {
     
     
     private var provisionTypeDistribution: [OutcomeData] {
-        // Add a debug print to see what's coming in
-        print("Filtered reports_count: \(viewModel.filteredReports.count)")
-        print("All reports_count: \(viewModel.reports.count)")
-        print("Unique types: \(Set(viewModel.filteredReports.map { $0.typeOfProvision }))")
+//        // Add a debug print to see what's coming in
+//        print("Filtered reports_count: \(viewModel.filteredReports.count)")
+//        print("All reports_count: \(viewModel.reports.count)")
+//        print("Unique types: \(Set(viewModel.filteredReports.map { $0.typeOfProvision }))")
         
         let types = viewModel.filteredReports.map { $0.typeOfProvision }
         let counts = Dictionary(grouping: types) { $0 }
             .mapValues { $0.count }
         
         // Add a debug print to see the counts
-        print("Counts dictionary: \(counts)")
+            //  print("Counts dictionary: \(counts)")
         
         return counts.map { type, count in
             let displayType = type.isEmpty ? "Not Specified" : type
@@ -93,7 +94,8 @@ struct HomeView: View {
     
     var body: some View {
         
-        NavigationStack{
+        NavigationStack(path: $path) {
+
             
         ScrollView(.vertical) {
             VStack(spacing: 0) {
@@ -185,81 +187,73 @@ struct HomeView: View {
                    
                     
                     
-                    
                     ScrollView {
-               
-                        NavigationLink {
-                            AnnualStats(allReports: viewModel.reports)
-                                .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.outcome, in: hero))
-                            
-                            
-                        } label: {
-                            OutcomesChartView(reports: viewModel.filteredReports, viewModel: viewModel)
-                                .padding(.bottom)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        .matchedTransitionSource(id: viewModel.filteredReports.first?.outcome, in: hero)
-                            
-                       
-                            
                         
-                         
-                            
-                            
-                            NavigationLink {
-                                AllInspectors(reports: viewModel.reports)
-                                    .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.inspector, in: hero))
-                                
-                                
-                            } label: {
-                                TopInspectorsCard(reports: viewModel.filteredReports)
-                                    .padding(.bottom)
-                              
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            .matchedTransitionSource(id: viewModel.filteredReports.first?.inspector, in: hero)
-                            
-                            
-                            
-                            
-                            NavigationLink {
-                                AllAreas(reports: viewModel.reports)
-                                    .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.localAuthority, in: hero))
-                                
-                                
-                            } label: {
-                                TopAreasCard(reports: viewModel.filteredReports)
-                                    .padding(.bottom)
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            .matchedTransitionSource(id: viewModel.filteredReports.first?.localAuthority, in: hero)
-                            
-                            
-                            
-                            NavigationLink {
-                              
-                                ThemesView()
-                                    .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.themes, in: hero))
-
-                                
-                            } label: {
-                                ThemeRankingCard(themes: getTheThemes(amount: 5))
-                                    .padding(.bottom)
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            .matchedTransitionSource(id: viewModel.filteredReports.first?.themes, in: hero)
-                            
-                       
-                    
-                           
-                        ProvisionTypeCard(data: provisionTypeDistribution, viewModel: viewModel)
                         
-                              
                         
-              
-                    }
-                    .padding()
-                    .scrollIndicators(.hidden)
+                        /// all stats
+                                       Button {
+                                           path.append(.annualStats)
+                                       } label: {
+                                           OutcomesChartView(reports: viewModel.filteredReports, viewModel: viewModel)
+                                               .padding(.bottom)
+                                       }
+                                       .buttonStyle(PlainButtonStyle())
+                                       .matchedTransitionSource(id: viewModel.filteredReports.first?.outcome, in: hero)
+                                       
+                        
+                        
+                        /// instpectos
+                                       Button {
+                                           path.append(.inspectors)
+                                       } label: {
+                                           TopInspectorsCard(reports: viewModel.filteredReports)
+                                               .padding(.bottom)
+                                       }
+                                       .buttonStyle(PlainButtonStyle())
+                                       .matchedTransitionSource(id: viewModel.filteredReports.first?.inspector, in: hero)
+                                       
+                        
+                        
+                        /// all areas
+                                       Button {
+                                           path.append(.areas)
+                                       } label: {
+                                           TopAreasCard(reports: viewModel.filteredReports)
+                                               .padding(.bottom)
+                                       }
+                                       .buttonStyle(PlainButtonStyle())
+                                       .matchedTransitionSource(id: viewModel.filteredReports.first?.localAuthority, in: hero)
+                                       
+                        
+                        
+                        
+                        /// all themes
+                                       Button {
+                                           path.append(.themes)
+                                       } label: {
+                                           ThemeRankingCard(themes: getTheThemes(amount: 5))
+                                               .padding(.bottom)
+                                       }
+                                       .buttonStyle(PlainButtonStyle())
+                                       .matchedTransitionSource(id: viewModel.filteredReports.first?.themes, in: hero)
+                                       
+                        
+                        
+                        
+                                        Button {
+                                            path.append(.provisionInformation)
+                                        } label: {
+                                            ProvisionTypeCard(data: provisionTypeDistribution, viewModel: viewModel)
+                                                .padding(.bottom)
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+                                        .matchedTransitionSource(id: viewModel.filteredReports.first?.previousInspection, in: hero)
+                        
+                                     
+                                   }
+                                   .padding()
+                                   .scrollIndicators(.hidden)
                     
                 }
                 .padding(.vertical)
@@ -298,12 +292,50 @@ struct HomeView: View {
                 SettingsView()
                        .presentationDetents([.large])
                }
+        .navigationDestination(for: NavigationPath.self) { destination in
+                    switch destination {
+                    case .annualStats:
+                        AnnualStats(allReports: viewModel.reports)
+                            .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.outcome, in: hero))
+                   
+                        
+                    case .inspectors:
+                        AllInspectors(reports: viewModel.reports, path: $path)
+                            .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.inspector, in: hero))
+                   
+                    case .areas:
+                        AllAreas(reports: viewModel.reports, path: $path)
+                            .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.localAuthority, in: hero))
+                    case .themes:
+                        ThemesView()
+                            .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.themes, in: hero))
+                        
+                        
+                    case .provisionInformation:
+                        ProvisionInformation(reports: viewModel.reports)
+                            .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.previousInspection, in: hero))
+                        
+                        
+                        
+                        /// child views
+                    case .inspectorProfile(let name):
+                        InspectorProfileView(profile: getInspectorProfile(name: name), reports: viewModel.reports)
+                        
+                    case .areaProfile(let name):
+                        AreaView(area: getAreaProfile(name: name), reports: viewModel.reports, path: $path)
+                        
+                        
+                        
+                 
+                    }
+            
+        
+                }
             
 
      
     }
         .onAppear {
-                    // Initialize filtering with current filter
                     Task {
                         await viewModel.filterReports(timeFilter: selectedTimeFilter)
                     }
@@ -370,6 +402,81 @@ struct HomeView: View {
         .padding(.horizontal, 15)
     }
     
+    
+    
+    
+    
+    
+    private func getInspectorProfile(name: String) -> InspectorProfile {
+        let inspectorReports = viewModel.reports.filter { $0.inspector == name }
+        
+        let areas = Dictionary(grouping: inspectorReports) { $0.localAuthority }
+            .mapValues { $0.count }
+        
+        var allGrades: [String: Int] = [:]
+        
+        inspectorReports.forEach { report in
+            if let overallRating = report.ratings.first(where: { $0.category == RatingCategory.overallEffectiveness.rawValue }) {
+                allGrades[overallRating.rating, default: 0] += 1
+            } else {
+                if !report.outcome.isEmpty {
+                    allGrades[report.outcome, default: 0] += 1
+                }
+            }
+        }
+        
+        return InspectorProfile(
+            name: name,
+            totalInspections: inspectorReports.count,
+            areas: areas,
+            grades: allGrades
+        )
+    }
+    
+    
+    
+    private func getAreaProfile(name: String) -> AreaProfile {
+        let areaReports = viewModel.reports.filter { $0.localAuthority == name }
+        
+        let inspectors = Dictionary(grouping: areaReports) { $0.inspector }
+            .mapValues { $0.count }
+        
+        var allGrades: [String: Int] = [:]
+        
+        // Count overall effectiveness ratings and outcomes
+        areaReports.forEach { report in
+            if let overallRating = report.ratings.first(where: { $0.category == RatingCategory.overallEffectiveness.rawValue }) {
+                allGrades[overallRating.rating, default: 0] += 1
+            } else {
+                if !report.outcome.isEmpty {
+                    allGrades[report.outcome, default: 0] += 1
+                }
+            }
+        }
+        
+        
+        let provisionTypes = Dictionary(grouping: areaReports) { $0.typeOfProvision }
+            .mapValues { $0.count }
+        
+        // Calculate themes
+        var themeCounts: [String: Int] = [:]
+        areaReports.forEach { report in
+            report.themes.forEach { theme in
+                themeCounts[theme.topic, default: 0] += theme.frequency
+            }
+        }
+        let sortedThemes = themeCounts.map { (topic: $0.key, frequency: $0.value) }
+            .sorted { $0.frequency > $1.frequency }
+        
+        return AreaProfile(
+            name: name,
+            totalInspections: areaReports.count,
+            inspectors: inspectors,
+            grades: allGrades,
+            provisionTypes: provisionTypes,
+            themes: sortedThemes
+        )
+    }
 }
 
 struct CustomScrollBehaviour: ScrollTargetBehavior {
@@ -385,3 +492,13 @@ struct CustomScrollBehaviour: ScrollTargetBehavior {
 }
 
 
+
+enum NavigationPath: Hashable {
+    case annualStats
+    case inspectors
+    case inspectorProfile(String)
+    case areaProfile(String)
+    case areas
+    case themes
+    case provisionInformation
+}

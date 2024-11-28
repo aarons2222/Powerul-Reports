@@ -424,6 +424,7 @@ class InspectionReportsViewModel: ObservableObject {
     }
     
     
+    
     deinit {
         listener?.remove()
     }

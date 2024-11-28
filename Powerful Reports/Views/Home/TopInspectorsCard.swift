@@ -46,6 +46,7 @@ struct TopInspectorsCard: View {
                 
                 ForEach(0..<inspectorData.count, id: \.self) { index in
                     let item = inspectorData[index]
+                    
                     HStack(alignment: .center) {
                         Text("\(item.name)")
                             .font(.body)

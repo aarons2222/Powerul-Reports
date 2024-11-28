@@ -27,8 +27,7 @@ struct InspectorProfileView: View {
                let date2 = dateFormatter.date(from: report2.date) ?? Date.distantPast
                
                return date1 > date2
-           }
-           .prefix(10))
+           })
     }
     
 
@@ -38,7 +37,7 @@ struct InspectorProfileView: View {
     init(profile: InspectorProfile, reports: [Report]){
         self.profile = profile
         self.reports = reports
-        print("Logger: AllInspectors")
+        print("Logger: InspectorProfileView")
 
     }
     
@@ -53,9 +52,7 @@ struct InspectorProfileView: View {
             
             ScrollView {
                 
-                Section(header: Text("Overview")) {
-                    LabeledContent("Total Inspections", value: "\(profile.totalInspections)")
-                }
+       
                 
                 
                 

@@ -11,6 +11,8 @@ struct MoreReportsView: View {
     let reports: [Report]
     let name: String
     
+    
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             
@@ -31,6 +33,7 @@ struct MoreReportsView: View {
                     } label: {
                         
                         ReportCard(report: report)
+                         
                     
                     }
                     .padding(.vertical, 4)
@@ -42,6 +45,7 @@ struct MoreReportsView: View {
                 
             }
             .scrollIndicators(.hidden)
+            .padding()
             
         }
       

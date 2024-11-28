@@ -6,10 +6,34 @@
 //
 
 import SwiftUI
+import Charts
 
 struct AreaView: View {
     let area: AreaProfile
     let reports: [Report]
+    
+    @State private var animationPercent = 0.0
+
+    var gradePercentages: [(grade: String, count: Int, percent: Int)] {
+          let totalCount = area.grades.values.reduce(0, +)
+          guard totalCount > 0 else { return [] }
+          
+          return area.grades.sorted(by: { $0.key < $1.key }).map { grade, count in
+              let percentage = (Double(count) / Double(totalCount)) * 100
+              return (grade: grade, count: count, percent: Int(round(percentage)))
+          }
+      }
+      
+    
+    func getColor(for grade: String) -> Color {
+           if let ratingValue = RatingValue(rawValue: grade) {
+               return ratingValue.color
+           }
+           return .gray
+       }
+    
+    
+    
     
     private func getInspectorProfile(name: String) -> InspectorProfile {
        print("Getting profile for inspector: \(name)")
@@ -41,12 +65,18 @@ struct AreaView: View {
        )
     }
     
-    init(area: AreaProfile, reports: [Report]){
+    @Binding var path: [NavigationPath]
+    
+    init(area: AreaProfile, reports: [Report], path: Binding<[NavigationPath]>){
         self.area = area
         self.reports = reports
+        self._path = path
         print("Logger: AreaView")
     }
     
+    
+
+ 
     var body: some View {
         let statistics = ThemeAnalyzer.getThemeStatistics(from: reports, for: area.name)
 
@@ -57,26 +87,81 @@ struct AreaView: View {
             
             VStack(spacing: 20) {
                 
-                CardView("Overview") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Total Inspections: \(area.totalInspections)")
-                            .font(.headline)
-                    }
-                }
+           
                 
                 // Grades Card
                 CardView("Outcomes") {
+                    
+                    
+                    Chart(gradePercentages,  id: \.grade) { item in
+                        SectorMark(
+                            angle: .value("Count", Double(item.count) * animationPercent),
+                            innerRadius: 70,
+                            angularInset: 1
+                        )
+                        .cornerRadius(5)
+                        .foregroundStyle(getColor(for: item.grade))
+                    }
+                    .frame(height: 250)
+                    .onAppear {
+                        withAnimation(.linear(duration: 0.6)) {
+                                    animationPercent = 1.0
+                                }
+                            }
+                    
                     VStack(alignment: .leading, spacing: 8) {
-                        ForEach(Array(area.grades.keys.sorted()), id: \.self) { grade in
+                        ForEach(gradePercentages, id: \.grade) { item in
+                       
                             HStack {
-                                Text(grade)
+                                
+                                Image(systemName: "largecircle.fill.circle")
+                                    .font(.body)
+                                    .foregroundStyle(getColor(for: item.grade))
+                                Text(item.grade)
+                                    .foregroundColor(.color4)
                                 Spacer()
-                                Text("\(area.grades[grade, default: 0])")
+                                Text("\(item.percent)%")
                                     .foregroundColor(.gray)
                             }
                         }
                     }
+                    
+                    
+//                    
+//                    Chart(gradePercentages, id: \.grade) { item in
+//                                              SectorMark(
+//                                                  angle: .value("Count", item.count),
+//                                                  innerRadius: .ratio(0.6),
+//                                                  angularInset: 1
+//                                              )
+//                                              .cornerRadius(5)
+//                                              .foregroundStyle(by: .value("Grade", item.grade))
+//                                          }
+//                                          .chartForegroundStyleScale(domain: gradePercentages.map { $0.grade },
+//                                                                   range: gradePercentages.map { getColor(for: $0.grade) })
+//                                          .frame(height: 200)
+//                                          .chartLegend(position: .bottom)
+//                                          
+//                                          VStack(alignment: .leading, spacing: 8) {
+//                                              ForEach(gradePercentages, id: \.grade) { item in
+//                                             
+//                                                  HStack {
+//                                                      
+//                                                      Image(systemName: "largecircle.fill.circle")
+//                                                          .font(.body)
+//                                                          .foregroundStyle(getColor(for: item.grade))
+//                                                      Text(item.grade)
+//                                                          .foregroundColor(.color4)
+//                                                      Spacer()
+//                                                      Text("\(item.percent)%")
+//                                                          .foregroundColor(.gray)
+//                                                  }
+//                                              }
+//                                          }
                 }
+                
+                
+            
                 
                 // Provision Types Card
                 CardView("Provider Types") {
@@ -109,12 +194,14 @@ struct AreaView: View {
                 
                 CardView("Inspectors") {
                     VStack(alignment: .leading, spacing: 8) {
-                        ForEach(Array(area.inspectors.keys.sorted()), id: \.self) { inspector in
-                            NavigationLink(destination: InspectorProfileView(profile: getInspectorProfile(name: inspector), reports: reports)) {
+                        ForEach(Array(area.inspectors.sorted(by: { $0.key < $1.key })), id: \.key) { inspector, count in
+                            Button {
+                                path.append(.inspectorProfile(inspector))
+                            } label: {
                                 HStack {
                                     Text(inspector)
                                     Spacer()
-                                    Text("\(area.inspectors[inspector, default: 0])")
+                                    Text("\(count)")
                                         .foregroundColor(.gray)
                                 }
                             }

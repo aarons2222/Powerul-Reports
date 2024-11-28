@@ -15,6 +15,10 @@ struct InspectorProfile: Identifiable {
     let grades: [String: Int]
 }
 struct AllInspectors: View {
+    
+    @Binding var path: [NavigationPath]
+
+    
     let reports: [Report]
     @State private var searchText = ""
     
@@ -76,11 +80,11 @@ struct AllInspectors: View {
     }
     
     
-    init(reports: [Report]){
+    init(reports: [Report], path: Binding<[NavigationPath]>) {
         self.reports = reports
-        print("Logger: AllInspectors")
-
+        self._path = path
     }
+    
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -107,18 +111,38 @@ struct AllInspectors: View {
                        ForEach(Array(filteredInspectorData.keys.sorted()), id: \.self) { letter in
                            if let inspectors = filteredInspectorData[letter], !inspectors.isEmpty {
                                Section {
+                                   
+                                   
+                                   
+                                   
                                    ForEach(inspectors) { item in
-                                       NavigationLink {
-                                           InspectorProfileView(profile: getInspectorProfile(name: item.name), reports: reports)
-                                       } label: {
+                                       Button {
+                                                   path.append(.inspectorProfile(item.name))
+                                               } label: {
                                            HStack(alignment: .center) {
-                                               Text(item.name)
-                                                   .font(.callout)
-                                                   .foregroundStyle(.color4)
+                                               
+                                               VStack(alignment: .leading, spacing: 5){
+                                                   
+                                                   
+                                                   Text(item.name)
+                                                       .font(.body)
+                                                       .foregroundStyle(.color4)
+                                                
+                                                   
+                                                   
+                                                   Text("\(item.count) report\(item.count > 1 ? "s" : "")")
+                                                       .font(.callout)
+                                                       .foregroundColor(.gray)
+                                                   
+                                                   
+                                               }
+                                               
                                                Spacer()
-                                               Text("\(item.count)")
-                                                   .font(.body)
-                                                   .foregroundColor(.gray)
+                                               Image(systemName: "chevron.right.circle")
+                                                   .font(.title2)
+                                                   .foregroundColor(.color1)
+                                               
+                                               
                                            }
                                            .padding()
                                            .background(.color0.opacity(0.3))

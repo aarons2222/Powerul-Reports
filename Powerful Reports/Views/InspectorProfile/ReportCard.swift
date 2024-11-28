@@ -44,9 +44,9 @@ struct ReportCard: View {
             }
             
             Spacer()
-            Image(systemName: "chevron.right")
-                .font(.body)
-                .foregroundColor(.gray)
+            Image(systemName: "chevron.right.circle")
+                .font(.title2)
+                .foregroundColor(.color1)
         }
 
     }
