@@ -10,11 +10,8 @@ import Charts
 
 struct InspectorProfileView: View {
     let profile: InspectorProfile
-    let reports: [Report]  // Add reports parameter
-    
-    
-
-
+    let reports: [Report]
+    @Binding var path: [NavigationPath]
     
     private var recentReports: [Report] {
        Array(reports
@@ -30,52 +27,36 @@ struct InspectorProfileView: View {
            })
     }
     
-
-    
-    
-    
-    init(profile: InspectorProfile, reports: [Report]){
+    init(profile: InspectorProfile, reports: [Report], path: Binding<[NavigationPath]>) {
         self.profile = profile
         self.reports = reports
+        self._path = path
         print("Logger: InspectorProfileView")
-
     }
     
-    
     var body: some View {
-        
         let statistics = ThemeAnalyzer.getInspectorThemeStatistics(from: reports, for: profile.name)
         
         VStack(alignment: .leading, spacing: 0) {
-            
             CustomHeaderVIew(title: profile.name)
             
             ScrollView {
-                
-       
-                
-                
-                
-                
-                
-                
                 CardView("Recent Reports",
                          navigationLink: recentReports.count > 5 ?
-                           AnyView(
-                             NavigationLink(
-                               destination: MoreReportsView(reports: recentReports, name: profile.name),
-                               label: {
-                                 Image(systemName: "plus.circle")
-                                   .font(.title2)
-                                   .foregroundColor(.color1)
-                               }
-                             )
-                           ) : nil) {
+                         AnyView(
+                            Button(action: {
+                                path.append(.moreReports(recentReports, profile.name))
+                            }) {
+                                Image(systemName: "plus.circle")
+                                    .font(.title2)
+                                    .foregroundColor(.color1)
+                            }
+                         ) : nil) {
                     ForEach(Array(recentReports.prefix(5))) { report in
-                        NavigationLink {
-                            ReportView(report: report)
+                        Button {
+                            path.append(.reportView(report))
                         } label: {
-                            ReportCard(report: report)
+                            ReportCard(report: report, showInspector: false)
                         }
                         .padding(.vertical, 4)
                         
@@ -84,24 +65,14 @@ struct InspectorProfileView: View {
                         }
                     }
                 }
-            
-                                      
                 .padding(.bottom)
-       
-                
-                
-                
-                
                 
                 CardView("Local Authorities Inspected") {
-                        ForEach(Array(profile.areas.keys.sorted()), id: \.self) { area in
-                            LabeledContent(area, value: "\(profile.areas[area] ?? 0)")
-                        }
+                    ForEach(Array(profile.areas.keys.sorted()), id: \.self) { area in
+                        LabeledContent(area, value: "\(profile.areas[area] ?? 0)")
+                    }
                 }
                 .padding(.bottom)
-             
-                
-                
                 
                 CardView("Popular themes") {
                     ForEach(statistics.topThemes.prefix(10), id: \.topic) { themeFreq in
@@ -110,14 +81,12 @@ struct InspectorProfileView: View {
                             Spacer()
                             Text("\(themeFreq.count)")
                                 .foregroundColor(.secondary)
-                            
                         }
                     }
                 }
                 .padding(.bottom)
-         
-                    
-                    CardView("Grades") {
+                
+                CardView("Grades") {
                     Chart {
                         ForEach(Array(profile.grades), id: \.key) { grade, count in
                             SectorMark(
@@ -154,29 +123,18 @@ struct InspectorProfileView: View {
                         generatePDF()
                     }
                 })
-                
-          
-                
-              
             }
             .scrollIndicators(.hidden)
             .padding()
         }
-     
         .ignoresSafeArea()
         .navigationBarHidden(true)
-     
-        
-        
- 
     }
     
     func calculatePercentage(_ count: Int) -> Int {
-         guard profile.totalInspections > 0 else { return 0 }
-         return Int(round(Double(count) / Double(profile.totalInspections) * 100))
+        guard profile.totalInspections > 0 else { return 0 }
+        return Int(round(Double(count) / Double(profile.totalInspections) * 100))
     }
-    
-    
     
     private func generatePDF() {
         let renderer = PDFRenderer(profile: profile, reports: reports)
@@ -194,9 +152,6 @@ struct InspectorProfileView: View {
         }
     }
 }
-
-
-
 
 import UIKit
 import PDFKit
@@ -253,4 +208,3 @@ class PDFRenderer {
         }
     }
 }
-

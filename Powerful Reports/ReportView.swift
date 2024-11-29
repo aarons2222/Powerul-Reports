@@ -9,80 +9,117 @@ import SwiftUI
 
 struct ReportView: View {
     var report: Report
+    @State private var selectedTheme: String?
+    @Environment(\.colorScheme) var colorScheme
     
     init(report: Report) {
         self.report = report
-        
         print("ReportView \(report.referenceNumber)")
     }
     
-    
     var body: some View {
-        
-
-     
+        VStack(spacing: 0) {
+            CustomHeaderVIew(title: report.referenceNumber)
             
-            VStack(spacing: 0) {
-                
-                
-                CustomHeaderVIew(title: report.referenceNumber)
-                
-                ScrollView {
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Report Information Card
                     CardView("Report Information") {
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 16) {
+                            InfoRow(icon: "number.circle.fill", title: "Reference", value: report.referenceNumber)
+                            InfoRow(icon: "person.fill", title: "Inspector", value: report.inspector)
+                            InfoRow(icon: "calendar", title: "Date", value: report.formattedDate)
+                            InfoRow(icon: "building.2.fill", title: "Local Authority", value: report.localAuthority)
+                            InfoRow(icon: "house.fill", title: "Type", value: report.typeOfProvision)
                             
-                            Text("Reference: \(report.referenceNumber)")
-                            Text("Inspector: \(report.inspector)")
-                            Text("Date: \(report.formattedDate)")
-                            Text("Local Authority: \(report.localAuthority)")
-                            Text("Type: \(report.typeOfProvision)")
-                            
-                            if (!report.previousInspection.contains("Not applicable")){
-                                Text("Previous: \(report.previousInspection)")
+                            if (!report.previousInspection.contains("Not applicable")) {
+                                InfoRow(icon: "clock.fill", title: "Previous", value: report.previousInspection)
                             }
                         }
                     }
-                    .padding(.bottom)
                     
+                    // Grade Card
                     CardView("Grade") {
-                        if (!report.outcome.isEmpty) {
-                            Text("Outcome: \(report.outcome)")
-                        } else {
-                            VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            if (!report.outcome.isEmpty) {
+                                HStack {
+                                    Text("Outcome")
+                                        .foregroundStyle(.secondary)
+                                    Spacer()
+                                    Text(report.outcome)
+                                        .fontWeight(.medium)
+                                }
+                            } else {
                                 ForEach(report.ratings, id: \.category) { rating in
                                     HStack {
                                         Text(rating.category)
+                                            .foregroundStyle(.secondary)
                                         Spacer()
                                         Text(rating.rating)
-                                            .foregroundColor(RatingValue(rawValue: rating.rating)?.color ?? .gray)
+                                            .fontWeight(.medium)
+                                            .foregroundStyle(RatingValue(rawValue: rating.rating)?.color ?? .gray)
                                     }
-                                    .padding(.bottom, 4)
                                 }
                             }
                         }
                     }
-                    .padding(.bottom)
                     
+                    // Themes Card
                     CardView("Themes") {
-                        VStack(alignment: .leading, spacing: 8) {
+                        LazyVGrid(columns: [
+                            GridItem(.adaptive(minimum: 150), spacing: 12)
+                        ], spacing: 12) {
                             ForEach(report.sortedThemes, id: \.topic) { theme in
-                                Text(theme.topic)
-                                    .padding(.vertical, 2)
+                                Button {
+                                    withAnimation(.spring()) {
+                                        selectedTheme = selectedTheme == theme.topic ? nil : theme.topic
+                                    }
+                                } label: {
+                                    Text(theme.topic)
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(selectedTheme == theme.topic ? .white : .color1)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background {
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .fill(selectedTheme == theme.topic ? Color.color1 : Color.color1.opacity(0.1))
+                                        }
+                                        .contentShape(Rectangle())
+                                }
                             }
                         }
                     }
-                    .padding(.bottom)
                 }
-                .scrollIndicators(.hidden)
                 .padding()
-                
-                
-                
             }
-        
-            .ignoresSafeArea()
-            .navigationBarHidden(true)
+            .scrollIndicators(.hidden)
+        }
+        .ignoresSafeArea()
+        .navigationBarHidden(true)
     }
 }
 
-
+struct InfoRow: View {
+    let icon: String
+    let title: String
+    let value: String
+    
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: icon)
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .frame(width: 20)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Text(value)
+                    .font(.body)
+                    .fontWeight(.medium)
+            }
+        }
+    }
+}

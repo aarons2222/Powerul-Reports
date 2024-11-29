@@ -301,7 +301,7 @@ struct HomeView: View {
         .scrollTargetBehavior(CustomScrollBehaviour())
             
         .sheet(isPresented: $showSettings) {
-                SettingsView()
+                SettingsView(viewModel: viewModel)
                        .presentationDetents([.large])
                }
         .navigationDestination(for: NavigationPath.self) { destination in
@@ -328,14 +328,14 @@ struct HomeView: View {
                             .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.previousInspection, in: hero))
                         
                     case .allReports:
-                        AllReportsView(viewModel: viewModel, path: $path)
+                        AllReportsView(mainViewModel: viewModel, path: $path)
                             .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.overallRating, in: hero))
                         
                         
                         
                         /// child views
                     case .inspectorProfile(let name):
-                        InspectorProfileView(profile: getInspectorProfile(name: name), reports: viewModel.reports)
+                        InspectorProfileView(profile: getInspectorProfile(name: name), reports: viewModel.reports, path: $path)
                         
                     case .areaProfile(let name):
                         AreaView(area: getAreaProfile(name: name), reports: viewModel.reports, path: $path)
@@ -347,10 +347,8 @@ struct HomeView: View {
 
                                        
                                   
-                        
-                        
-                     
-            
+                    case .moreReports(let reports, let name):
+                        MoreReportsView(reports: reports, name: name, path: $path)
                     }
             
         
@@ -527,5 +525,5 @@ enum NavigationPath: Hashable {
     case provisionInformation
     case allReports
     case reportView(Report)
-    
+    case moreReports([Report], String)
 }

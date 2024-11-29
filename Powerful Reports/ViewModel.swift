@@ -1,33 +1,61 @@
 import SwiftUI
 import Firebase
-
-
+import FirebaseFirestore
+import Combine
 
 class InspectionReportsViewModel: ObservableObject {
     @Published var reports: [Report] = []
-    @Published private(set) var filteredReports: [Report] = []
+    @Published var searchText: String = ""
+    @Published private(set) var searchResults: [String: [Report]] = [:] // Grouped search results
+    @Published private(set) var searchDates: [String] = [] // Sorted dates for search results
     @Published private(set) var provisionTypeDistribution: [OutcomeData] = []
-    @Published private(set) var groupedReports: [String: [Report]] = [:]
-    @Published private(set) var sortedDates: [String] = []
+    @Published var filteredReports: [Report] = []
+    @Published var reportsCount: Int = 0
+    @Published var lastFirebaseUpdate: Date?
+    @Published var isLoading: Bool = false
+    @Published var showPaywall: Bool = false
+    @Published var isPremium: Bool = false // Add this to track subscription status
+
+    // Filter states
+    @Published var selectedInspector: String?
+    @Published var selectedAuthority: String?
+    @Published var selectedProvisionType: String?
+    @Published var selectedRating: String?
+    @Published var selectedOutcome: String?
+    @Published var selectedDateRange: ClosedRange<Date>?
+    
+    // Time Filter
+    private var currentTimeFilter: TimeFilter = .last30Days
     
     // Caching structures
+     var groupedReports: [String: [Report]] = [:]
+      var sortedDates: [String] = []
     private var reportsByInspector: [String: [Report]] = [:]
     private var reportsByAuthority: [String: [Report]] = [:]
     private var reportsByDate: [String: [Report]] = [:]
-
-    private let dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd MMMM yyyy"
-        formatter.calendar = Calendar.current
-        formatter.timeZone = TimeZone.current
-        return formatter
-    }()
-    private var db = Firestore.firestore()
+    
+    // Firebase
+    private let db = Firestore.firestore()
     private var listener: ListenerRegistration?
     
-    private(set) var reportsCount: Int = 0
-    private(set) var selectedTimeFilter: String = TimeFilter.last30Days.rawValue
+    // Pagination
+    private var currentPage = 0
+    private let pageSize = 10
+    private var hasMoreData = true
     
+    // Search
+    private var searchCancellable: AnyCancellable?
+    
+    // Trial Mode
+    private let isTrial = false
+    
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd/MM/yyyy"
+        return formatter
+    }()
+    
+    // Cache file URLs
     private let cacheDirectory: URL? = {
         let directory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
             .appendingPathComponent("Reports")
@@ -48,13 +76,53 @@ class InspectionReportsViewModel: ObservableObject {
         cacheDirectory?.appendingPathComponent("metadata_cache.json")
     }
     
-    private var currentPage = 0
-    private let pageSize = 20
-    private var hasMoreData = true
-    @State var isTrial = false
+    var uniqueInspectors: [String] {
+        Array(Set(reports.map { $0.inspector })).sorted()
+    }
     
-    // Keep track of the current filter to know when to reset
-    private var currentTimeFilter: TimeFilter = .last30Days
+    var uniqueAuthorities: [String] {
+        Array(Set(reports.map { $0.localAuthority })).sorted()
+    }
+    
+    var uniqueProvisionTypes: [String] {
+        Array(Set(reports.map { $0.typeOfProvision })).sorted()
+    }
+    
+    var uniqueRatings: [String] {
+        Array(Set(reports.compactMap { $0.overallRating })).sorted()
+    }
+    
+    var uniqueOutcomes: [String] {
+        Array(Set(reports.map { $0.outcome })).sorted()
+    }
+    
+    var uniqueGradesAndOutcomes: [(String, Color)] {
+        var results: Set<String> = []
+        var gradesWithColors: [(String, Color)] = []
+        
+        for report in reports {
+            if !report.outcome.isEmpty && !results.contains(report.outcome) {
+                results.insert(report.outcome)
+                gradesWithColors.append((report.outcome, report.outcome == "Met" ? .color2 : .color6))
+            } else if let overallRating = report.ratings.first(where: { $0.category == RatingCategory.overallEffectiveness.rawValue }),
+                      !results.contains(overallRating.rating),
+                      let ratingValue = RatingValue(rawValue: overallRating.rating) {
+                results.insert(overallRating.rating)
+                gradesWithColors.append((overallRating.rating, ratingValue.color))
+            }
+        }
+        
+        return gradesWithColors.sorted { $0.0 < $1.0 }
+    }
+    
+    private func getGradeOrOutcome(for report: Report) -> String? {
+        if !report.outcome.isEmpty {
+            return report.outcome
+        } else if let overallRating = report.ratings.first(where: { $0.category == RatingCategory.overallEffectiveness.rawValue }) {
+            return overallRating.rating
+        }
+        return nil
+    }
     
     init() {
         if isTrial {
@@ -70,23 +138,45 @@ class InspectionReportsViewModel: ObservableObject {
             loadCachedReports()
             fetchReports()
         }
+        
+        // Setup search functionality
+        searchCancellable = $searchText
+            .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
+            .removeDuplicates()
+            .sink { [weak self] searchText in
+                self?.performSearch(searchText)
+            }
     }
     
     // MARK: - Cache Management
     
     private func buildCaches() async {
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask {
-                self.reportsByInspector = Dictionary(grouping: self.reports) { $0.inspector }
+        // Group reports by date, handling any date formatting issues
+        let dateGroups = Dictionary(grouping: reports) { report -> String in
+            if let dateComponents = report.date.components(separatedBy: " - ").last?.trimmingCharacters(in: .whitespaces),
+               let _ = dateFormatter.date(from: dateComponents) {
+                return dateComponents
             }
-            
-            group.addTask {
-                self.reportsByAuthority = Dictionary(grouping: self.reports) { $0.localAuthority }
+            return report.date // Fallback to original date if parsing fails
+        }
+        
+        let inspectorGroups = Dictionary(grouping: reports) { $0.inspector }
+        let authorityGroups = Dictionary(grouping: reports) { $0.localAuthority }
+        
+        let sortedDateKeys = dateGroups.keys.sorted { date1, date2 in
+            guard let date1Date = dateFormatter.date(from: date1),
+                  let date2Date = dateFormatter.date(from: date2) else {
+                return date1 > date2 // Fallback to string comparison if parsing fails
             }
-            
-            group.addTask {
-                self.reportsByDate = Dictionary(grouping: self.reports) { $0.date }
-            }
+            return date1Date > date2Date
+        }
+        
+        await MainActor.run {
+            self.reportsByDate = dateGroups
+            self.reportsByInspector = inspectorGroups
+            self.reportsByAuthority = authorityGroups
+            self.groupedReports = dateGroups
+            self.sortedDates = sortedDateKeys
         }
     }
     
@@ -137,102 +227,90 @@ class InspectionReportsViewModel: ObservableObject {
         if isTrial { return }
         
         print("Fetching Reports")
+        isLoading = true
         
-        listener = db.collection("reports").addSnapshotListener { [weak self] querySnapshot, error in
-            guard let self = self else { return }
-            
-            if let error = error {
-                print("Error fetching documents: \(error)")
-                return
-            }
-            
-            guard let documents = querySnapshot?.documents else {
-                print("No documents found.")
-                return
-            }
-            
-            let newReports = documents.compactMap { document -> Report? in
-                let data = document.data()
+        listener = db.collection("reports")
+            .order(by: "date", descending: true)
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self = self else { return }
                 
-                let ratingsData = data["ratings"] as? [[String: Any]] ?? []
-                let ratings = ratingsData.map { ratingData in
-                    Rating(
-                        category: ratingData["category"] as? String ?? "",
-                        rating: ratingData["rating"] as? String ?? ""
+                defer {
+                    self.isLoading = false
+                }
+                
+                if let error = error {
+                    print("Error fetching reports: \(error)")
+                    return
+                }
+                
+                guard let documents = snapshot?.documents else {
+                    print("No documents found")
+                    return
+                }
+                
+                self.reports = documents.compactMap { document in
+                    let data = document.data()
+                    
+                    // Decode ratings
+                    let ratingsData = data["ratings"] as? [[String: Any]] ?? []
+                    let ratings = ratingsData.map { ratingData in
+                        Rating(
+                            category: ratingData["category"] as? String ?? "",
+                            rating: ratingData["rating"] as? String ?? ""
+                        )
+                    }
+                    
+                    // Decode themes
+                    let themesData = data["themes"] as? [[String: Any]] ?? []
+                    let themes = themesData.map { themeData in
+                        Theme(
+                            frequency: themeData["frequency"] as? Int ?? 0,
+                            topic: themeData["topic"] as? String ?? ""
+                        )
+                    }
+                    
+                    // Decode timestamp
+                    let timestampData = data["timestamp"] as? [String: Any] ?? [:]
+                    let timestamp = Timestamp(
+                        _seconds: timestampData["_seconds"] as? Int64 ?? 0,
+                        _nanoseconds: timestampData["_nanoseconds"] as? Int64 ?? 0
+                    )
+                    
+                    return Report(
+                        id: document.documentID,
+                        date: data["date"] as? String ?? "",
+                        inspector: data["inspector"] as? String ?? "",
+                        localAuthority: data["localAuthority"] as? String ?? "",
+                        outcome: data["outcome"] as? String ?? "",
+                        previousInspection: data["previousInspection"] as? String ?? "",
+                        ratings: ratings,
+                        referenceNumber: data["referenceNumber"] as? String ?? "",
+                        themes: themes,
+                        typeOfProvision: data["typeOfProvision"] as? String ?? "",
+                        timestamp: timestamp
                     )
                 }
                 
-                let themesData = data["themes"] as? [[String: Any]] ?? []
-                let themes = themesData.map { themeData in
-                    Theme(
-                        frequency: themeData["frequency"] as? Int ?? 0,
-                        topic: themeData["topic"] as? String ?? ""
-                    )
-                }
-                
-                let timestampData = data["timestamp"] as? [String: Any] ?? [:]
-                let timestamp = Timestamp(
-                    _seconds: timestampData["_seconds"] as? Int64 ?? 0,
-                    _nanoseconds: timestampData["_nanoseconds"] as? Int64 ?? 0
-                )
-                
-                return Report(
-                    id: document.documentID,
-                    date: data["date"] as? String ?? "",
-                    inspector: data["inspector"] as? String ?? "",
-                    localAuthority: data["localAuthority"] as? String ?? "",
-                    outcome: data["outcome"] as? String ?? "",
-                    previousInspection: data["previousInspection"] as? String ?? "",
-                    ratings: ratings,
-                    referenceNumber: data["referenceNumber"] as? String ?? "",
-                    themes: themes,
-                    typeOfProvision: data["typeOfProvision"] as? String ?? "",
-                    timestamp: timestamp
-                )
-            }
-            
-            let newIds = Set(newReports.map { $0.id })
-            let existingIds = Set(self.reports.map { $0.id })
-            
-            if newIds != existingIds {
-                self.reports = newReports
+                self.filteredReports = self.reports
                 self.reportsCount = self.reports.count
-                self.saveToCacheFile()
-                print("Reports updated. Total count: \(self.reports.count)")
+                self.lastFirebaseUpdate = Date()
                 
+                // Save to cache
+                self.saveToCacheFile()
+                
+                // Update caches and UI
                 Task { @MainActor in
                     await self.buildCaches()
-                    self.filteredReports = self.reports
                     await self.updateProvisionTypeDistribution()
+                    
+                    // Initialize pagination
+                    self.currentPage = 0
+                    self.hasMoreData = true
+                    self.loadNextPage()
                 }
-            } else {
-                print("No changes in reports.")
             }
-        }
     }
     
-    func filterReports(timeFilter: TimeFilter) async {
-        let filterDate = timeFilter.date
-        print("Total reports before filtering: \(reports.count)")
-        print("Filter date: \(filterDate)")
-        
-        let filtered = reports.filter { report in
-            let dateComponents = report.date.components(separatedBy: " - ")
-            let dateString = dateComponents.count > 1 ? dateComponents[1] : report.date
-            guard let reportDate = self.dateFormatter.date(from: dateString.trimmingCharacters(in: .whitespaces)) else {
-                return false
-            }
-            return reportDate >= filterDate
-        }
-        
-        await MainActor.run {
-            self.filteredReports = filtered
-            Task {
-                await self.updateProvisionTypeDistribution()
-            }
-        }
-    }
-
     private func updateProvisionTypeDistribution() async {
         let distribution = await withTaskGroup(of: [OutcomeData].self) { group in
             let types = filteredReports.map { $0.typeOfProvision }
@@ -363,51 +441,45 @@ class InspectionReportsViewModel: ObservableObject {
     }
     
     private func loadNextPage() {
-        // Simulate pagination with existing data
-        let start = currentPage * pageSize
-        let end = min(start + pageSize, reports.count)
+        guard hasMoreData && !isLoading else { return }
         
-        guard start < reports.count else {
-            hasMoreData = false
-            return
+        isLoading = true
+        
+        let startIndex = currentPage * pageSize
+        let endIndex = min(startIndex + pageSize, filteredReports.count)
+        
+        // Simulate network delay for smooth loading
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self = self else { return }
+            
+            let newItems = Array(self.filteredReports[startIndex..<endIndex])
+            self.currentPage += 1
+            self.hasMoreData = endIndex < self.filteredReports.count
+            self.isLoading = false
         }
-        
-        let newReports = Array(reports[start..<end])
-        processNewReports(newReports)
-        currentPage += 1
     }
     
     private func processNewReports(_ newReports: [Report]) {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "dd/MM/yyyy"
-        
         // Performance: Process in background with chunks
-        DispatchQueue.global(qos: .userInitiated).async {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
             let filteredNewReports = newReports.filter { report in
-                guard let reportDate = dateFormatter.date(from: report.date) else { return false }
+                guard let reportDate = self.dateFormatter.date(from: report.date) else { return false }
                 return reportDate >= self.currentTimeFilter.date
             }
             
-            let newGrouped = Dictionary(grouping: filteredNewReports) { $0.date }
-            
-            DispatchQueue.main.async {
-                // Merge new reports with existing ones
-                for (date, reports) in newGrouped {
-                    if var existing = self.groupedReports[date] {
-                        existing.append(contentsOf: reports)
-                        self.groupedReports[date] = existing
-                    } else {
-                        self.groupedReports[date] = reports
-                    }
-                }
+            // Process in chunks of 50 reports
+            let chunkSize = 50
+            for i in stride(from: 0, to: filteredNewReports.count, by: chunkSize) {
+                let end = min(i + chunkSize, filteredNewReports.count)
+                let chunk = Array(filteredNewReports[i..<end])
                 
-                // Performance: Cache sorted dates result
-                self.sortedDates = self.groupedReports.keys.sorted { date1, date2 in
-                    guard let date1 = DateFormatter.reportDate.date(from: date1),
-                          let date2 = DateFormatter.reportDate.date(from: date2) else {
-                        return false
-                    }
-                    return date1 > date2
+                // Update on main thread
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    self.filteredReports.append(contentsOf: chunk)
+                    self.reportsCount = self.filteredReports.count
                 }
             }
         }
@@ -420,6 +492,29 @@ class InspectionReportsViewModel: ObservableObject {
         currentPage = 0
         hasMoreData = true
         loadNextPage()
+    }
+    
+    
+    func filterReports(timeFilter: TimeFilter) async {
+        let filterDate = timeFilter.date
+        print("Total reports before filtering: \(reports.count)")
+        print("Filter date: \(filterDate)")
+        
+        let filtered = reports.filter { report in
+            let dateComponents = report.date.components(separatedBy: " - ")
+            let dateString = dateComponents.count > 1 ? dateComponents[1] : report.date
+            guard let reportDate = self.dateFormatter.date(from: dateString.trimmingCharacters(in: .whitespaces)) else {
+                return false
+            }
+            return reportDate >= filterDate
+        }
+        
+        await MainActor.run {
+            self.filteredReports = filtered
+            Task {
+                await self.updateProvisionTypeDistribution()
+            }
+        }
     }
     
     func calculatePercentage(_ count: Int) -> Double {
@@ -497,6 +592,158 @@ class InspectionReportsViewModel: ObservableObject {
         }
     }
     
+    private func performSearch(_ query: String) {
+        guard !query.isEmpty else {
+            Task { @MainActor in
+                self.searchResults = [:]
+                self.searchDates = []
+            }
+            return
+        }
+        
+        let lowercasedQuery = query.lowercased()
+        let results = reports.filter { report in
+            report.referenceNumber.lowercased().contains(lowercasedQuery) ||
+            report.inspector.lowercased().contains(lowercasedQuery) ||
+            report.localAuthority.lowercased().contains(lowercasedQuery) ||
+            report.typeOfProvision.lowercased().contains(lowercasedQuery) ||
+            report.themes.contains { $0.topic.lowercased().contains(lowercasedQuery) }
+        }
+        
+        Task { @MainActor in
+            let groupedSearchResults = Dictionary(grouping: results) { $0.date }
+            self.searchResults = groupedSearchResults
+            self.searchDates = groupedSearchResults.keys.sorted { date1, date2 in
+                guard let date1 = DateFormatter.reportDate.date(from: date1),
+                      let date2 = DateFormatter.reportDate.date(from: date2) else {
+                    return false
+                }
+                return date1 > date2
+            }
+        }
+    }
+    
+    private func applyFilters(to reports: [Report]) -> [Report] {
+        var filteredReports = reports
+        
+        // Apply inspector filter
+        if let inspector = selectedInspector {
+            filteredReports = filteredReports.filter { $0.inspector == inspector }
+        }
+        
+        // Apply authority filter
+        if let authority = selectedAuthority {
+            filteredReports = filteredReports.filter { $0.localAuthority == authority }
+        }
+        
+        // Apply provision type filter
+        if let provisionType = selectedProvisionType {
+            filteredReports = filteredReports.filter { $0.typeOfProvision == provisionType }
+        }
+        
+        // Apply combined grade/outcome filter
+        if let gradeOrOutcome = selectedRating ?? selectedOutcome {
+            filteredReports = filteredReports.filter { report in
+                if !report.outcome.isEmpty {
+                    return report.outcome == gradeOrOutcome
+                } else if let overallRating = report.ratings.first(where: { $0.category == RatingCategory.overallEffectiveness.rawValue }) {
+                    return overallRating.rating == gradeOrOutcome
+                }
+                return false
+            }
+        }
+        
+        // Apply date range filter
+        if let dateRange = selectedDateRange {
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "dd/MM/yyyy"
+            
+            filteredReports = filteredReports.filter { report in
+                if let date = dateFormatter.date(from: report.date) {
+                    return dateRange.contains(date)
+                }
+                return false
+            }
+        }
+        
+        return filteredReports
+    }
+    
+    func updateFilters() {
+        Task { @MainActor in
+            // Apply filters to all reports
+            let filteredReports = applyFilters(to: reports)
+            
+            // Group filtered reports by date, handling any date formatting issues
+            let groupedFiltered = Dictionary(grouping: filteredReports) { report -> String in
+                if let dateComponents = report.date.components(separatedBy: " - ").last?.trimmingCharacters(in: .whitespaces),
+                   let _ = dateFormatter.date(from: dateComponents) {
+                    return dateComponents
+                }
+                return report.date // Fallback to original date if parsing fails
+            }
+            
+            // Update both the filtered reports and the grouped reports
+            self.filteredReports = filteredReports
+            self.groupedReports = groupedFiltered
+            
+            // Sort dates safely
+            self.sortedDates = groupedFiltered.keys.sorted { date1, date2 in
+                if let date1Date = dateFormatter.date(from: date1),
+                   let date2Date = dateFormatter.date(from: date2) {
+                    return date1Date > date2Date
+                }
+                return date1 > date2 // Fallback to string comparison if parsing fails
+            }
+            
+            // Also update search results if there's an active search
+            if !searchText.isEmpty {
+                let searchFiltered = filteredReports.filter { report in
+                    let lowercasedQuery = searchText.lowercased()
+                    return report.referenceNumber.lowercased().contains(lowercasedQuery) ||
+                           report.inspector.lowercased().contains(lowercasedQuery) ||
+                           report.localAuthority.lowercased().contains(lowercasedQuery) ||
+                           report.typeOfProvision.lowercased().contains(lowercasedQuery) ||
+                           report.themes.contains { $0.topic.lowercased().contains(lowercasedQuery) }
+                }
+                
+                // Group search results using the same safe date handling
+                let groupedSearchResults = Dictionary(grouping: searchFiltered) { report -> String in
+                    if let dateComponents = report.date.components(separatedBy: " - ").last?.trimmingCharacters(in: .whitespaces),
+                       let _ = dateFormatter.date(from: dateComponents) {
+                        return dateComponents
+                    }
+                    return report.date
+                }
+                
+                self.searchResults = groupedSearchResults
+                self.searchDates = groupedSearchResults.keys.sorted { date1, date2 in
+                    if let date1Date = dateFormatter.date(from: date1),
+                       let date2Date = dateFormatter.date(from: date2) {
+                        return date1Date > date2Date
+                    }
+                    return date1 > date2
+                }
+            } else {
+                self.searchResults = [:]
+                self.searchDates = []
+            }
+            
+            // Update the provision type distribution
+            await self.updateProvisionTypeDistribution()
+        }
+    }
+
+    func clearFilters() {
+        selectedInspector = nil
+        selectedAuthority = nil
+        selectedProvisionType = nil
+        selectedRating = nil
+        selectedOutcome = nil
+        selectedDateRange = nil
+        updateFilters()
+    }
+    
     deinit {
         listener?.remove()
     }
@@ -507,9 +754,7 @@ class InspectionReportsViewModel: ObservableObject {
     ]
 }
 
-
-
- extension Calendar {
+extension Calendar {
     func startOfMonth(for date: Date) -> Date {
         let components = dateComponents([.year, .month], from: date)
         return self.date(from: components)!
@@ -521,7 +766,7 @@ class InspectionReportsViewModel: ObservableObject {
     }
 }
 
- extension Date {
+extension Date {
     var monthYearString: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM yyyy"
