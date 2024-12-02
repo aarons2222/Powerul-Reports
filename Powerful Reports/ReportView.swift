@@ -33,7 +33,8 @@ struct ReportView: View {
                             InfoRow(icon: "house.fill", title: "Type", value: report.typeOfProvision)
                             
                             if (!report.previousInspection.contains("Not applicable")) {
-                                InfoRow(icon: "clock.fill", title: "Previous", value: report.previousInspection)
+                                InfoRow(icon: "clock.fill", title: "Previous Inspection", value: report.previousInspection.replacingOccurrences(of: "inspection ", with: "" ))
+                                   
                             }
                         }
                     }

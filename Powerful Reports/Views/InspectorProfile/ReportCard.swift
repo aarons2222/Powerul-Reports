@@ -42,7 +42,7 @@ struct ReportCard: View {
                         .foregroundColor(RatingValue(rawValue: report.overallRating ?? report.outcome)?.color ?? .secondary)
                     
                     
-                    Text(report.overallRating ?? report.outcome)
+                    Text(report.overallRating?.capitalized ?? report.outcome)
                         .font(.body)
                         .foregroundColor(.color4)
                 }

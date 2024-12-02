@@ -14,7 +14,7 @@ import Combine
 struct AllReportsView: View {
     @StateObject private var viewModel: AllReportsViewModel
     @ObservedObject var mainViewModel: InspectionReportsViewModel
-    @AppStorage("selectedTimeFilter") private var selectedTimeFilter: TimeFilter = .last30Days
+    @AppStorage("selectedTimeFilter") private var selectedTimeFilter: TimeFilter = .last3Months
     @Binding var path: [NavigationPath]
     @State private var showFilters = false
     
@@ -136,9 +136,9 @@ struct FilterView: View {
     @ObservedObject var viewModel: AllReportsViewModel
     
     var body: some View {
-        NavigationView {
-            List {
-                Section("Inspector") {
+     
+        ScrollView {
+            CardView("Grade/Outcome") {
                     Picker("Select Inspector", selection: $viewModel.selectedInspector) {
                         Text("Any").tag(Optional<String>.none)
                         ForEach(viewModel.availableInspectors, id: \.self) { inspector in
@@ -146,8 +146,9 @@ struct FilterView: View {
                         }
                     }
                 }
+            .padding(.bottom)
                 
-                Section("Local Authority") {
+            CardView("Grade/Outcome") {
                     Picker("Select Authority", selection: $viewModel.selectedAuthority) {
                         Text("Any").tag(Optional<String>.none)
                         ForEach(viewModel.availableAuthorities, id: \.self) { authority in
@@ -155,8 +156,10 @@ struct FilterView: View {
                         }
                     }
                 }
+            .padding(.bottom)
                 
-                Section("Provision Type") {
+           
+           CardView("Provision Type") {
                     Picker("Select Type", selection: $viewModel.selectedProvisionType) {
                         Text("Any").tag(Optional<String>.none)
                         ForEach(viewModel.availableProvisionTypes, id: \.self) { type in
@@ -164,55 +167,69 @@ struct FilterView: View {
                         }
                     }
                 }
+                .padding(.bottom)
                 
-                Section("Grade/Outcome") {
-                    Picker("Select Grade/Outcome", selection: Binding(
+            CardView("Grade/Outcome") {
+                    RatingGrid(selectedRating: Binding(
                         get: {
-                            viewModel.selectedRating ?? viewModel.selectedOutcome
+                            if let rating = viewModel.selectedRating {
+                                return RatingValue(rawValue: rating) ?? .none
+                            } else if let outcome = viewModel.selectedOutcome {
+                                return RatingValue(rawValue: outcome) ?? .none
+                            }
+                            return .none
                         },
                         set: { newValue in
                             // Clear both first
                             viewModel.selectedRating = nil
                             viewModel.selectedOutcome = nil
                             
-                            // Then set the appropriate one
-                            if let value = newValue {
-                                if ["Met", "Not met"].contains(value) {
-                                    viewModel.selectedOutcome = value
-                                } else {
-                                    viewModel.selectedRating = value
-                                }
+                            // Then set the appropriate one based on the rating value
+                            let value = newValue.rawValue
+                            if ["Met", "Not met"].contains(value) {
+                                viewModel.selectedOutcome = value
+                            } else {
+                                viewModel.selectedRating = value
                             }
                         }
-                    )) {
-                        Text("Any").tag(Optional<String>.none)
-                        ForEach(viewModel.uniqueGradesAndOutcomes, id: \.0) { grade, color in
-                            Text(grade)
-                                .foregroundColor(color)
-                                .tag(Optional(grade))
-                        }
-                    }
+                    ))
                 }
-            }
-            .navigationTitle("Filters")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
+            
+            
+            
+            GlobalButton(title: "See Reports"){
                 
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Clear All") {
-                        viewModel.clearFilters()
-                    }
-                    .disabled(!viewModel.hasActiveFilters)
-                }
             }
+            }
+            .padding()
+           
+        }
+    }
+
+// An enum for possible rating values
+enum RatingValue: String, CaseIterable {
+    case outstanding = "Outstanding"
+    case good = "Good"
+    case met = "Met"
+    case inadequate = "Inadequate"
+    case requiresImprovement = "Requires improvement"
+    case notmet = "Not Met"
+    case none = ""
+    
+    var color: Color {
+        switch self {
+        case .outstanding: return .color7
+        case .good: return .color1
+        case .met: return .color2
+        case .inadequate: return .color8
+        case .requiresImprovement: return .color5
+        case .notmet: return .color6
+        case .none: return .gray
         }
     }
 }
+
+
 
 struct FilterChip: View {
     let text: String
@@ -302,3 +319,61 @@ extension DateFormatter {
         return formatter
     }()
 }
+
+
+
+
+#Preview{
+    FilterView(viewModel: AllReportsViewModel(mainViewModel: InspectionReportsViewModel()))
+}
+
+
+
+struct RatingGrid: View {
+    @Binding var selectedRating: RatingValue
+    
+    let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
+
+    
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: 8) { // Reduce vertical spacing
+            ForEach(Array(RatingValue.allCases.filter { $0 != .none }), id: \.self) { rating in
+                VStack(spacing: 4) { // Reduce spacing between circle and text
+                    CircleButton(color: rating.color,
+                               isSelected: selectedRating == rating,
+                               size: 50) // Reduce circle size
+                        .onTapGesture {
+                            selectedRating = rating
+                        }
+                    
+                    Text(rating.rawValue.capitalized)
+                        .foregroundStyle(rating.color)
+                        .font(.caption2) // Use smaller font
+                        .minimumScaleFactor(0.8) // Allow text to scale down if needed
+                        .lineLimit(1) // Ensure single line
+                }
+            }
+        }
+
+    }
+}
+struct CircleButton: View {
+    var color: Color
+    var isSelected: Bool
+    var size: CGFloat
+    
+    private var innerCircleSize: CGFloat { size * 0.75 }  // Inner circle is 75% of outer
+    private var strokeWidth: CGFloat { size * 0.1 }       // Stroke is 10% of size
+    
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(color, lineWidth: isSelected ? strokeWidth : 0)
+                .frame(width: size, height: size)
+            Circle()
+                .foregroundStyle(color)
+                .frame(width: innerCircleSize, height: innerCircleSize)
+        }
+    }
+}
+

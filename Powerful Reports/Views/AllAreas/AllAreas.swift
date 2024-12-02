@@ -109,13 +109,20 @@ struct AllAreas: View {
                  }else{
                      
                      ScrollView {
+                         
                          LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                              ForEach(Array(filteredAreaData.keys.sorted()), id: \.self) { letter in
                                  Section {
-                                     ForEach(filteredAreaData[letter] ?? []) { item in
+                                     
+                                     
+                                     ForEach(filteredAreaData[letter]?.sorted { $0.name < $1.name } ?? []) { item in
+
+                                         
+                                         
+                                         
                                          
                                          Button {
-                                                     path.append(.areaProfile(item.name))
+                                            path.append(.areaProfile(item.name))
                                          } label: {
                                              
                         

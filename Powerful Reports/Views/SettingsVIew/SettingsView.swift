@@ -186,6 +186,8 @@ struct SettingsView: View {
                                 .background(Color.color0.opacity(0.3))
                             }
                             
+                            
+                            Spacer()
                             // App Version
                             HStack {
                                 Text("App Version")
@@ -196,15 +198,8 @@ struct SettingsView: View {
                             .padding()
                             .background(Color.color0.opacity(0.3))
                             
-                            // Build Number
-                            HStack {
-                                Text("Build")
-                                Spacer()
-                                Text(Bundle.main.buildNumber)
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding()
-                            .background(Color.color0.opacity(0.3))
+                         
+                            
                         }
                         .cornerRadius(10)
                     }

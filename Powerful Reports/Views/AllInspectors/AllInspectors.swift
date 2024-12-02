@@ -112,10 +112,7 @@ struct AllInspectors: View {
                            if let inspectors = filteredInspectorData[letter], !inspectors.isEmpty {
                                Section {
                                    
-                                   
-                                   
-                                   
-                                   ForEach(inspectors) { item in
+                                   ForEach(inspectors.sorted { $0.name < $1.name }) { item in
                                        Button {
                                                    path.append(.inspectorProfile(item.name))
                                                } label: {

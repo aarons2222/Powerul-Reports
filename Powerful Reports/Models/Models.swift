@@ -116,36 +116,12 @@ enum RatingCategory: String, CaseIterable {
     case leadershipAndManagement = "Leadership and management"
 }
 
-// An enum for possible rating values
-enum RatingValue: String, CaseIterable {
-    case outstanding = "Outstanding"
-    case good = "Good"
-    case requiresImprovement = "Requires improvement"
-    case inadequate = "Inadequate"
-    case met = "Met"
-    case notmet = "Not Met"
-    case none = ""
-    
-    var color: Color {
-        switch self {
-        case .outstanding: return .color7
-        case .good: return .color1
-        case .requiresImprovement: return .color5
-        case .inadequate: return .color8
-        case .met: return .color2
-        case .notmet: return .color6
-        case .none: return .gray
-        }
-    }
-}
-
 
 
 
 
 
 enum TimeFilter: String, Codable, CaseIterable {
-    case last30Days = "30 Days"
     case last3Months = "3 Months"
     case last6Months = "6 Months"
     case last12Months = "1 Year"
@@ -156,8 +132,6 @@ enum TimeFilter: String, Codable, CaseIterable {
         let calendar = Calendar.current
         let now = Date()
         switch self {
-        case .last30Days:
-            return calendar.date(byAdding: .day, value: -30, to: now)!
         case .last3Months:
             return calendar.date(byAdding: .month, value: -3, to: now)!
         case .last6Months:

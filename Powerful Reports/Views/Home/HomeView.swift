@@ -20,7 +20,7 @@ struct HomeView: View {
     
           @State var showSettings = false
     
-    @AppStorage("selectedTimeFilter") private var selectedTimeFilter: TimeFilter = .last30Days
+    @AppStorage("selectedTimeFilter") private var selectedTimeFilter: TimeFilter = .last3Months
 
     
     
@@ -37,7 +37,6 @@ struct HomeView: View {
                 return Array(repeating: GridItem(.flexible(), spacing: 16), count: columns)
             }
         }
-    
     
     
     private var provisionTypeDistribution: [OutcomeData] {
@@ -206,6 +205,21 @@ struct HomeView: View {
                                        
                         
                         
+                        
+                        /// all themes
+                                       Button {
+                                           path.append(.themes)
+                                       } label: {
+                                           ThemeRankingCard(themes: getTheThemes(amount: 5))
+                                               .padding(.bottom)
+                                       }
+                                       .buttonStyle(PlainButtonStyle())
+                                       .matchedTransitionSource(id: viewModel.filteredReports.first?.themes, in: hero)
+                        
+                        
+                        
+                        
+                        
                         /// instpectos
                                        Button {
                                            path.append(.inspectors)
@@ -231,15 +245,7 @@ struct HomeView: View {
                         
                         
                         
-                        /// all themes
-                                       Button {
-                                           path.append(.themes)
-                                       } label: {
-                                           ThemeRankingCard(themes: getTheThemes(amount: 5))
-                                               .padding(.bottom)
-                                       }
-                                       .buttonStyle(PlainButtonStyle())
-                                       .matchedTransitionSource(id: viewModel.filteredReports.first?.themes, in: hero)
+                       
                                        
                         
                         
@@ -304,6 +310,8 @@ struct HomeView: View {
                 SettingsView(viewModel: viewModel)
                        .presentationDetents([.large])
                }
+            
+            
         .navigationDestination(for: NavigationPath.self) { destination in
                     switch destination {
                     case .annualStats:
@@ -319,8 +327,9 @@ struct HomeView: View {
                         AllAreas(reports: viewModel.reports, path: $path)
                             .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.localAuthority, in: hero))
                     case .themes:
-                        ThemesView()
-                            .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.themes, in: hero))
+                        let themeData = viewModel.getThemeAnalysis()
+                        ThemesView(themes: themeData)
+                            .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.themes.first, in: hero))
                         
                         
                     case .provisionInformation:

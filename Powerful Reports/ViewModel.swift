@@ -25,7 +25,7 @@ class InspectionReportsViewModel: ObservableObject {
     @Published var selectedDateRange: ClosedRange<Date>?
     
     // Time Filter
-    private var currentTimeFilter: TimeFilter = .last30Days
+    private var currentTimeFilter: TimeFilter = .last3Months
     
     // Caching structures
      var groupedReports: [String: [Report]] = [:]
@@ -571,14 +571,28 @@ class InspectionReportsViewModel: ObservableObject {
     }
     
     func getThemeAnalysis() -> [(String, Double)] {
-        let themes = reports.flatMap { $0.themes }
-        let totalThemes = Double(themes.count)
-        let distribution = Dictionary(grouping: themes) { $0.topic }
-            .mapValues { themes in
-                let totalFrequency = Double(themes.reduce(0) { $0 + $1.frequency })
-                return (totalFrequency / totalThemes) * 100
+        // Create a dictionary to store theme counts
+        var themeCounts: [String: Int] = [:]
+        let totalReports = Double(reports.count)
+        
+        // Process reports in chunks for better performance
+        let chunkSize = 100
+        for i in stride(from: 0, to: reports.count, by: chunkSize) {
+            let endIndex = min(i + chunkSize, reports.count)
+            let chunk = reports[i..<endIndex]
+            
+            for report in chunk {
+                let uniqueThemes = Set(report.themes.map { $0.topic })
+                for theme in uniqueThemes {
+                    themeCounts[theme, default: 0] += 1
+                }
             }
-        return distribution.sorted { $0.value > $1.value }
+        }
+        
+        // Convert counts to percentages
+        return themeCounts.map { theme, count in
+            (theme, (Double(count) / totalReports) * 100)
+        }.sorted { $0.1 > $1.1 }
     }
     
     func searchReports(query: String) -> [Report] {
@@ -591,6 +605,8 @@ class InspectionReportsViewModel: ObservableObject {
             report.themes.contains { $0.topic.lowercased().contains(lowercasedQuery) }
         }
     }
+    
+    
     
     private func performSearch(_ query: String) {
         guard !query.isEmpty else {

@@ -7,9 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		93BA2E022CEAA24D0025E019 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 93BA2E012CEAA24D0025E019 /* FirebaseAnalytics */; };
-		93BA2E042CEAA24D0025E019 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 93BA2E032CEAA24D0025E019 /* FirebaseCrashlytics */; };
-		93BA2E062CEAA24D0025E019 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 93BA2E052CEAA24D0025E019 /* FirebaseFirestore */; };
+		93B3A6B42CFCC64800548BEB /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 93B3A6B32CFCC64800548BEB /* FirebaseFirestore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,9 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				93BA2E022CEAA24D0025E019 /* FirebaseAnalytics in Frameworks */,
-				93BA2E042CEAA24D0025E019 /* FirebaseCrashlytics in Frameworks */,
-				93BA2E062CEAA24D0025E019 /* FirebaseFirestore in Frameworks */,
+				93B3A6B42CFCC64800548BEB /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -64,6 +60,7 @@
 				93BA2D602CEAA1520025E019 /* Sources */,
 				93BA2D612CEAA1520025E019 /* Frameworks */,
 				93BA2D622CEAA1520025E019 /* Resources */,
+				93B3A6B12CFCC14C00548BEB /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -74,9 +71,7 @@
 			);
 			name = "Powerful Reports";
 			packageProductDependencies = (
-				93BA2E012CEAA24D0025E019 /* FirebaseAnalytics */,
-				93BA2E032CEAA24D0025E019 /* FirebaseCrashlytics */,
-				93BA2E052CEAA24D0025E019 /* FirebaseFirestore */,
+				93B3A6B32CFCC64800548BEB /* FirebaseFirestore */,
 			);
 			productName = "Powerful Reports";
 			productReference = 93BA2D642CEAA1520025E019 /* Powerful Reports.app */;
@@ -107,7 +102,7 @@
 			mainGroup = 93BA2D5B2CEAA1520025E019;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				93BA2E002CEAA24D0025E019 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				93B3A6B22CFCC64800548BEB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 93BA2D652CEAA1520025E019 /* Products */;
@@ -128,6 +123,31 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		93B3A6B12CFCC14C00548BEB /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}",
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${PRODUCT_NAME}",
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Info.plist",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist",
+				"$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)",
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		93BA2D602CEAA1520025E019 /* Sources */ = {
@@ -174,7 +194,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -266,26 +286,31 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_ASSET_PATHS = "\"Powerful Reports/Preview Content\"";
-				DEVELOPMENT_TEAM = WPKGKN3X3Z;
+				DEVELOPMENT_TEAM = SPBTU747B4;
+				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = co.uk.strickland.Reports;
+				PRODUCT_BUNDLE_IDENTIFIER = co.uk.powerfulpractitioners.powerfulreports;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -297,25 +322,29 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Powerful Reports/Preview Content\"";
-				DEVELOPMENT_TEAM = WPKGKN3X3Z;
+				DEVELOPMENT_TEAM = SPBTU747B4;
+				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = co.uk.strickland.Reports;
+				PRODUCT_BUNDLE_IDENTIFIER = co.uk.powerfulpractitioners.powerfulreports;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -343,7 +372,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		93BA2E002CEAA24D0025E019 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+		93B3A6B22CFCC64800548BEB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
 			requirement = {
@@ -354,19 +383,9 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		93BA2E012CEAA24D0025E019 /* FirebaseAnalytics */ = {
+		93B3A6B32CFCC64800548BEB /* FirebaseFirestore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 93BA2E002CEAA24D0025E019 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseAnalytics;
-		};
-		93BA2E032CEAA24D0025E019 /* FirebaseCrashlytics */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 93BA2E002CEAA24D0025E019 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseCrashlytics;
-		};
-		93BA2E052CEAA24D0025E019 /* FirebaseFirestore */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 93BA2E002CEAA24D0025E019 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			package = 93B3A6B22CFCC64800548BEB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
 		};
 /* End XCSwiftPackageProductDependency section */

@@ -15,7 +15,7 @@ struct ThemeRankingCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
 
-                Text("Top Themes")
+                Text("Trending Themes")
                     .font(.title3)
                     .fontWeight(.regular)
                     .foregroundColor(.color4)

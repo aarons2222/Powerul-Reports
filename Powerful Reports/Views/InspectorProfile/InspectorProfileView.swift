@@ -60,9 +60,6 @@ struct InspectorProfileView: View {
                         }
                         .padding(.vertical, 4)
                         
-                        if report != recentReports.prefix(5).last {
-                            Divider()
-                        }
                     }
                 }
                 .padding(.bottom)
@@ -106,7 +103,7 @@ struct InspectorProfileView: View {
                                 Image(systemName: "largecircle.fill.circle")
                                     .font(.body)
                                     .foregroundStyle(RatingValue(rawValue: grade)?.color ?? .gray)
-                                Text(grade)
+                                Text(grade.capitalized)
                                     .font(.body)
                                     .foregroundColor(.color4)
                                 Spacer()

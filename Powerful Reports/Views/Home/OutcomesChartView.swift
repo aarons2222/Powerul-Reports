@@ -85,7 +85,7 @@ struct OutcomesChartView: View {
                                    .font(.body)
                                    .foregroundStyle(data.color)
                                
-                               Text(data.outcome)
+                               Text(data.outcome.capitalized)
                                    .font(.body)
                                    .foregroundColor(.color4)
                                

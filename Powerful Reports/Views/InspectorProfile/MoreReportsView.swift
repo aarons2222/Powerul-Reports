@@ -25,9 +25,7 @@ struct MoreReportsView: View {
                     }
                     .padding(.vertical, 4)
                     
-                    if report != reports.last {
-                        Divider()
-                    }
+                  
                 }
             }
             .scrollIndicators(.hidden)
