@@ -26,24 +26,29 @@ struct AllReportsView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            CustomHeaderVIew(title: "All Reports")
             
-            ZStack {
+      
+             
+
+            CustomHeaderVIew(
+                title: "All Reports",
+                showFilterButton: true,
+                showFilters: Binding<Bool>(        // Convert the regular binding to optional binding
+                    get: { showFilters },
+                    set: { showFilters = $0  }
+                )
+            )
+
+                
+              
+                
+            HStack(spacing: 0) {
                 SearchBar(searchText: $mainViewModel.searchText,
                          placeHolder: "Search \(Set(mainViewModel.reports.map { $0.referenceNumber }).count) Reports...")
                 
-                HStack {
-                    Spacer()
-                    Button {
-                        showFilters.toggle()
-                    } label: {
-                        Image(systemName: "line.3.horizontal.decrease.circle")
-                            .foregroundColor(.color2)
-                            .font(.title2)
-                    }
-                    .padding(.trailing, 8)
-                }
+         
             }
+            
             
             // Active Filters View
             if viewModel.hasActiveFilters {
@@ -93,6 +98,8 @@ struct AllReportsView: View {
                     .padding(.horizontal)
                     .padding(.vertical, 8)
                 }
+        
+                
             }
             
             if !mainViewModel.searchText.isEmpty {
@@ -100,7 +107,7 @@ struct AllReportsView: View {
             } else {
                 ScrollViewReader { proxy in
                     ScrollView {
-                        LazyVStack(spacing: 16, pinnedViews: [.sectionHeaders]) {
+                        LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                             ForEach(viewModel.sortedDates, id: \.self) { date in
                                 Section(header: DateHeaderView(date: date)) {
                                     ForEach(viewModel.groupedReports[date] ?? [], id: \.id) { report in
@@ -108,6 +115,7 @@ struct AllReportsView: View {
                                             path.append(.reportView(report))
                                         } label: {
                                             ReportCard(report: report, showInspector: true)
+                                                .padding(.bottom, 10)
 
                                         }
                                         .buttonStyle(.plain)
@@ -118,8 +126,14 @@ struct AllReportsView: View {
                         .padding(.horizontal)
                     }
                 }
+                .scrollDismissesKeyboard(.interactively)
+                .scrollIndicators(.hidden)
+                .padding(.bottom)
+                .background(.clear)
+             
             }
         }
+        .keyboardAdaptive()
         .navigationBarHidden(true)
         .ignoresSafeArea()
         .onChange(of: selectedTimeFilter) {
@@ -138,36 +152,24 @@ struct FilterView: View {
     var body: some View {
      
         ScrollView {
-            CardView("Grade/Outcome") {
-                    Picker("Select Inspector", selection: $viewModel.selectedInspector) {
-                        Text("Any").tag(Optional<String>.none)
-                        ForEach(viewModel.availableInspectors, id: \.self) { inspector in
-                            Text(inspector).tag(Optional(inspector))
-                        }
-                    }
-                }
-            .padding(.bottom)
+      
                 
-            CardView("Grade/Outcome") {
-                    Picker("Select Authority", selection: $viewModel.selectedAuthority) {
-                        Text("Any").tag(Optional<String>.none)
-                        ForEach(viewModel.availableAuthorities, id: \.self) { authority in
-                            Text(authority).tag(Optional(authority))
-                        }
-                    }
-                }
-            .padding(.bottom)
-                
-           
-           CardView("Provision Type") {
-                    Picker("Select Type", selection: $viewModel.selectedProvisionType) {
-                        Text("Any").tag(Optional<String>.none)
-                        ForEach(viewModel.availableProvisionTypes, id: \.self) { type in
-                            Text(type).tag(Optional(type))
-                        }
-                    }
-                }
+                CustomPicker(selection: $viewModel.selectedInspector, items: viewModel.availableInspectors)
                 .padding(.bottom)
+            
+       
+     
+                
+        
+                CustomPicker(selection: $viewModel.selectedAuthority, items: viewModel.availableAuthorities)
+                .padding(.bottom)
+           
+
+               
+               CustomPicker(selection: $viewModel.selectedProvisionType, items: viewModel.availableProvisionTypes)
+                .padding(.bottom)
+            
+         
                 
             CardView("Grade/Outcome") {
                     RatingGrid(selectedRating: Binding(
@@ -300,13 +302,13 @@ struct DateHeaderView: View {
             VStack {
                 Spacer()
                 Text("\(date)")
-                    .font(.title3)
+                    .font(.headline)
                     .padding(.horizontal, 12)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .foregroundStyle(.color4)
                 Spacer()
             }
-            .frame(height: 40)
+            .frame(height: 30)
         }
     }
 }
@@ -377,3 +379,6 @@ struct CircleButton: View {
     }
 }
 
+struct AuthorityItem: Identifiable, Equatable {
+    let id: String
+}

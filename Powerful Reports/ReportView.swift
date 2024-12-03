@@ -20,6 +20,7 @@ struct ReportView: View {
     var body: some View {
         VStack(spacing: 0) {
             CustomHeaderVIew(title: report.referenceNumber)
+                .padding(0)
             
             ScrollView {
                 VStack(spacing: 20) {
@@ -93,6 +94,15 @@ struct ReportView: View {
                     }
                 }
                 .padding()
+                
+                
+                NavigationLink{
+                    OffestedView(URN: report.referenceNumber)
+                }label: {
+                    Text("View Full Report")
+                }
+                
+                .padding(.bottom, 50)
             }
             .scrollIndicators(.hidden)
         }
@@ -120,6 +130,95 @@ struct InfoRow: View {
                 Text(value)
                     .font(.body)
                     .fontWeight(.medium)
+            }
+        }
+    }
+}
+
+
+
+
+
+
+
+struct OffestedView: View {
+    @State private var isLoading = false
+    @State private var showingDetail = false
+    @State private var selectedURL: URL?
+    
+    
+    var URN: String
+    var body: some View {
+        VStack(spacing: 0) {
+            CustomHeaderVIew(title: URN)
+        ZStack {
+            
+       
+                OfstedWebView(
+                    searchText:URN,
+                    isLoading: $isLoading
+                )
+        
+            
+            if isLoading {
+                OffestedLoadingView()
+            }
+        }
+        }
+        .ignoresSafeArea()
+        .navigationBarHidden(true)
+    }
+}
+
+
+struct OffestedLoadingView: View {
+    @State private var magnifyingGlassPosition = CGSize.zero
+    @State private var isPulsing = false
+    
+    var body: some View {
+        ZStack {
+            LinearGradient(gradient: Gradient(colors: [.color0, .color1, .color2]),
+                          startPoint: .top,
+                          endPoint: .bottom)
+            
+            VStack(spacing: 20) {
+                ZStack {
+                    // Static clipboard
+                    Image(systemName: "chart.line.text.clipboard")
+                        .font(.system(size: 100))
+                        .foregroundColor(.white)
+                        .opacity(0.8)
+                    
+                    // Moving magnifying glass
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 40))
+                        .foregroundColor(.color2)
+                        .offset(x: magnifyingGlassPosition.width, y: magnifyingGlassPosition.height)
+                }
+                .frame(width: 120, height: 120)
+                
+                Text("Loading Offsted website")
+                    .foregroundColor(.white)
+                    .opacity(isPulsing ? 0.6 : 1)
+            }
+        }
+        .ignoresSafeArea()
+        .onAppear {
+            // Animate magnifying glass movement
+            withAnimation(
+                .easeInOut(duration: 2)
+                .repeatForever(autoreverses: true)
+            ) {
+                // Move in a scanning pattern
+                magnifyingGlassPosition = CGSize(width: 30, height: 20)
+            }
+            
+            // Pulse the loading text
+            withAnimation(
+                .easeInOut(duration: 1.5)
+                .repeatForever(autoreverses: true)
+            ) {
+                isPulsing = true
             }
         }
     }

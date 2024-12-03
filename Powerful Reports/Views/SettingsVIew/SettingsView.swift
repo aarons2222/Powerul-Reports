@@ -14,7 +14,6 @@ struct SettingsView: View {
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
-        formatter.timeStyle = .short
         return formatter
     }()
     
@@ -188,15 +187,7 @@ struct SettingsView: View {
                             
                             
                             Spacer()
-                            // App Version
-                            HStack {
-                                Text("App Version")
-                                Spacer()
-                                Text(Bundle.main.appVersionLong)
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding()
-                            .background(Color.color0.opacity(0.3))
+                      
                             
                          
                             
@@ -205,6 +196,11 @@ struct SettingsView: View {
                     }
                 }
                 .padding()
+                
+            
+                    Text("Version - \(Bundle.main.appVersionLong) (\(Bundle.main.buildNumber))")
+                    
+                   
             }
         }
         .navigationBarHidden(true)

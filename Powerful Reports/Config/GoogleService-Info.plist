@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>co.uk.strickland.Reports</string>
+	<string>co.uk.powerfulpractitioners.powerfulreports</string>
 	<key>PROJECT_ID</key>
 	<string>reports-ccb93</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:33548640847:ios:fc2a989dc04895b517003a</string>
+	<string>1:33548640847:ios:93056a05bc078e1717003a</string>
 </dict>
 </plist>

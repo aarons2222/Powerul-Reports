@@ -83,7 +83,7 @@ struct InspectorProfileView: View {
                 }
                 .padding(.bottom)
                 
-                CardView("Grades") {
+                CardView("Outcomes") {
                     Chart {
                         ForEach(Array(profile.grades), id: \.key) { grade, count in
                             SectorMark(
@@ -97,7 +97,7 @@ struct InspectorProfileView: View {
                     .frame(height: 200)
                     .padding()
                     
-                    ForEach(profile.grades.sorted(by: { $0.key < $1.key }), id: \.key) { grade, count in
+                    ForEach(profile.grades.sorted(by: { $0.value > $1.value }), id: \.key) { grade, count in
                         if grade != "empty" {
                             HStack {
                                 Image(systemName: "largecircle.fill.circle")

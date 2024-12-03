@@ -5,7 +5,7 @@
 //  Created by Aaron Strickland on 29/11/2024.
 //
 import SwiftUI
-
+import Combine
 
 struct SearchBar: View {
     @Binding var searchText: String
@@ -21,6 +21,8 @@ struct SearchBar: View {
                 TextField(placeHolder, text: $searchText)
                     .autocorrectionDisabled()
                     .accentColor(.color3.opacity(0.9))
+      
+                
               
                 
                 if !searchText.isEmpty {
@@ -39,3 +41,4 @@ struct SearchBar: View {
         .background(.color0.opacity(0.1))
     }
 }
+

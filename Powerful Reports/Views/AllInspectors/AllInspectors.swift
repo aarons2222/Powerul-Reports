@@ -171,12 +171,14 @@ struct AllInspectors: View {
                    }
                    .padding(.horizontal)
                 }
+                .scrollDismissesKeyboard(.interactively)
                 .scrollIndicators(.hidden)
                 .padding(.bottom)
                 .background(.clear)
               
             }
         }
+        .keyboardAdaptive()
         .ignoresSafeArea()
         .navigationBarHidden(true)
     }
@@ -195,3 +197,5 @@ struct InstpectorData: Identifiable, Hashable {
         lhs.id == rhs.id
     }
 }
+
+

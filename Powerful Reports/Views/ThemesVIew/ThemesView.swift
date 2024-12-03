@@ -18,31 +18,39 @@ struct ThemesView: View {
     @State private var expandedId: Int? = nil
     
     init(themes: [(String, Double)]) {
-        let thresholds = [(0.0, 100.0), (0.0, 74.9), (0.0, 49.9), (0.0, 24.9), (0.0, 4.9), (0.0, 0.9)]
+        // Define ranges with min and max values (exclusive)
+        let thresholds = [
+            (75.0, 100.1), // Universal (75-100%)
+            (50.0, 75.0),  // Very Common (50-75%)
+            (25.0, 50.0),  // Frequent (25-50%)
+            (5.0, 25.0),   // Moderate (5-25%)
+            (1.0, 5.0),    // Uncommon (1-5%)
+            (0.0, 1.0)     // Rare (<1%)
+        ]
         
         self.themeGroups = thresholds.compactMap { range -> ProcessedThemeGroup? in
             let (min, max) = range
             
             let themesInRange = themes.filter { theme in
-                theme.1 >= min && theme.1 <= max
+                theme.1 >= min && theme.1 < max  // Use < instead of <= for exclusive upper bound
             }.map { $0.0 }
             
             guard !themesInRange.isEmpty else { return nil }
             
             let title: [String]
             switch max {
-            case 100.0:
-                title = ["Universal", "Found in 100% of reports)"]
-            case 74.9:
-                title = ["Very Common", "Found in 75% of reports"]
-            case 49.9:
-                title = ["Frequent", "Found in 50% of reports)"]
-            case 24.9:
-                title = ["Moderate", "Found in 25% of reports)"]
-            case 4.9:
-                title = ["Uncommon", "Found in 5% of reports)"]
-            case 0.9:
-                title = ["Rare", "Found in 1% of reports"]
+            case 100.1:
+                title = ["Universal", "Found in over 75% of reports"]
+            case 75.0:
+                title = ["Very Common", "Found in 50-75% of reports"]
+            case 50.0:
+                title = ["Frequent", "Found in 25-50% of reports"]
+            case 25.0:
+                title = ["Moderate", "Found in 5-25% of reports"]
+            case 5.0:
+                title = ["Uncommon", "Found in 1-5% of reports"]
+            case 1.0:
+                title = ["Rare", "Found in less than 1% of reports"]
             default:
                 title = ["Other Themes", ""]
             }
@@ -52,7 +60,7 @@ struct ThemesView: View {
     }
     
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
             CustomHeaderVIew(title: "All Themes")
             ScrollView {
                 LazyVStack(spacing: 16) {

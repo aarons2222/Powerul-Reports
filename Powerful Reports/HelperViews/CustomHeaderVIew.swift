@@ -8,22 +8,23 @@
 import SwiftUI
 
 struct CustomHeaderVIew: View {
-    
     @Environment(\.presentationMode) var presentationMode
-
-    var title: String
-
+      var title: String
+      var showFilterButton: Bool?
+      @Binding var showFilters: Bool
+      
+      init(title: String, showFilterButton: Bool? = nil, showFilters: Binding<Bool> = .constant(false)) {
+          self.title = title
+          self.showFilterButton = showFilterButton
+          self._showFilters = showFilters
+      }
+    
     
     var body: some View {
-        
-     
-            
-            
-            
-        ZStack{
+        ZStack {
             Rectangle()
                 .fill(.color1)
-                .frame(height: 150) // Set explicit height
+                .frame(height: 150)
                 .overlay(alignment: .leading) {
                     Circle()
                         .fill(.color1)
@@ -36,44 +37,45 @@ struct CustomHeaderVIew: View {
                 }
                 .clipShape(Rectangle())
             
-            VStack{
+            VStack {
                 Spacer()
                 
-                HStack{
-             
-                        
-                        Button{
-                            presentationMode.wrappedValue.dismiss()
-                        }label: {
-                            Image(systemName: "chevron.backward.circle.fill")
-                                .font(.title)
-                                .fontWeight(.regular)
-                                .foregroundStyle(.white)
-                                .opacity(0.6)
-                        }
+                HStack {
+                    Button {
+                        presentationMode.wrappedValue.dismiss()
+                    } label: {
+                        Image(systemName: "chevron.backward.circle.fill")
+                            .font(.title)
+                            .fontWeight(.regular)
+                            .foregroundStyle(.white.opacity(0.6))
+                    }
                     
-                    
-                    
-                 
-
                     Text(title)
                         .font(.largeTitle)
                         .foregroundStyle(.white)
                     
                     Spacer()
                     
-                 
+                    if let showFilterButton = showFilterButton, showFilterButton {
+                        Button {
+                            showFilters.toggle()
+                        } label: {
+                            Image(systemName: "line.3.horizontal.decrease.circle")
+                                .font(.title)
+                                .fontWeight(.regular)
+                                .foregroundColor(.white)
+                               
+                        }
+                      
+                    }
                 }
-                
             }
             .padding()
             .background(.clear)
             .frame(height: 150)
         }
+        .ignoresSafeArea(.container, edges: .top)
     }
-    
 }
 
-#Preview {
-    CustomHeaderVIew(title: "Hello")
-}
+

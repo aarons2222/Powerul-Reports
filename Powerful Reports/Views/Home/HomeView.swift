@@ -15,6 +15,7 @@ struct HomeView: View {
         @Namespace var hero
         @StateObject private var viewModel = InspectionReportsViewModel()
     
+    
         @Environment(\.colorScheme) private var scheme
     
     
@@ -138,11 +139,11 @@ struct HomeView: View {
                                     if minY == 75.0 {
                                         /// Not Scrolled
                                         /// Showing All Cards
-                                        CardView(reportNumber: viewModel.getTotalReportsCount())
+                                        CardView(reportNumber: viewModel.reportsCount)
                                     } else {
                                         /// Scrolled
                                         /// Showing Only Selected Card
-                                        CardView(reportNumber: viewModel.getTotalReportsCount())
+                                        CardView(reportNumber: viewModel.reportsCount)
                                         
                                     }
                                 }
@@ -315,7 +316,7 @@ struct HomeView: View {
         .navigationDestination(for: NavigationPath.self) { destination in
                     switch destination {
                     case .annualStats:
-                        AnnualStats(allReports: viewModel.reports)
+                        AnnualStatsView(viewModel: viewModel)
                             .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.outcome, in: hero))
                    
                         
@@ -369,8 +370,8 @@ struct HomeView: View {
         .onAppear {
                     Task {
                         await viewModel.filterReports(timeFilter: selectedTimeFilter)
-                    }
-                }
+        }
+    }
       
         
     }

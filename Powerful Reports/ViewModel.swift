@@ -212,7 +212,7 @@ class InspectionReportsViewModel: ObservableObject {
             let encoder = JSONEncoder()
             let data = try encoder.encode(reports)
             try data.write(to: reportsCacheFile)
-            print("Saved \(reports.count) reports to cache")
+            print("Saved \(reports.count) saveToCacheFilee")
             
             // Update metadata
             self.reportsCount = reports.count
@@ -479,7 +479,10 @@ class InspectionReportsViewModel: ObservableObject {
                 DispatchQueue.main.async { [weak self] in
                     guard let self = self else { return }
                     self.filteredReports.append(contentsOf: chunk)
-                    self.reportsCount = self.filteredReports.count
+                    Task{
+                        self.reportsCount = self.filteredReports.count
+                    }
+                    
                 }
             }
         }
@@ -511,6 +514,7 @@ class InspectionReportsViewModel: ObservableObject {
         
         await MainActor.run {
             self.filteredReports = filtered
+            self.reportsCount = self.filteredReports.count
             Task {
                 await self.updateProvisionTypeDistribution()
             }

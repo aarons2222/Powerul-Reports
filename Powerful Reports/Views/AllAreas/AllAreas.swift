@@ -182,6 +182,7 @@ struct AllAreas: View {
                          }
                          .padding(.horizontal)
                      }
+                     .scrollDismissesKeyboard(.interactively)
                      .scrollIndicators(.hidden)
                      .padding(.bottom)
                      .background(.clear)
@@ -191,6 +192,7 @@ struct AllAreas: View {
                  }
                  
              }
+             .keyboardAdaptive()
              .ignoresSafeArea()
              .navigationBarHidden(true)
 
