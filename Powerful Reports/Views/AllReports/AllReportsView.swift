@@ -188,7 +188,9 @@ struct FilterView: View {
                             
                             // Then set the appropriate one based on the rating value
                             let value = newValue.rawValue
-                            if ["Met", "Not met"].contains(value) {
+                            
+                                        
+                            if ["Met", "Not met"].map({ $0.lowercased() }).contains(value.lowercased()) {
                                 viewModel.selectedOutcome = value
                             } else {
                                 viewModel.selectedRating = value
@@ -200,7 +202,7 @@ struct FilterView: View {
             
             
             GlobalButton(title: "See Reports"){
-                
+                dismiss()
             }
             }
             .padding()

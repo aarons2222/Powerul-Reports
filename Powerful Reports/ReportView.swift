@@ -50,6 +50,7 @@ struct ReportView: View {
                                     Spacer()
                                     Text(report.outcome)
                                         .fontWeight(.medium)
+                                        .foregroundStyle(RatingValue(rawValue: report.outcome)?.color ?? .gray)
                                 }
                             } else {
                                 ForEach(report.ratings, id: \.category) { rating in
