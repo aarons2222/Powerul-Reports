@@ -73,22 +73,29 @@ struct OutcomeRow: View {
     let total: Int
     
     var body: some View {
+        
         HStack {
-            Circle()
-                .fill(outcomeColor(outcome))
-                .frame(width: 8, height: 8)
-            
+            Image(systemName: "largecircle.fill.circle")
+                .font(.body)
+                .foregroundStyle(outcomeColor(outcome))
+        
             Text(outcome)
-                .font(.subheadline)
-            
-            Spacer()
+                .font(.body)
+                .foregroundColor(.color4)
+
             
             Text("\(count)")
-                .font(.subheadline)
-                .foregroundColor(.gray)
+                .font(.body)
+                .foregroundColor(.color4)
             
+                Spacer()
+        
+            Text("\(count)")
+                    .font(.body)
+                    .foregroundColor(.color4)
+
             Text("(\(String(format: "%.1f%%", Double(count) / Double(total) * 100)))")
-                .font(.caption)
+                .font(.footnote)
                 .foregroundColor(.gray)
         }
     }
@@ -119,11 +126,11 @@ struct ProviderSection: View {
                 .foregroundColor(.color4)
             
             VStack(alignment: .leading, spacing: 4) {
-                ForEach(Array(outcomes.sorted { $0.key < $1.key }), id: \.key) { outcome, count in
+                ForEach(Array(outcomes.sorted { $0.value > $1.value }), id: \.key) { outcome, count in
                     OutcomeRow(outcome: outcome, count: count, total: total)
                 }
             }
-            .padding(.leading)
+    
             
             if !isLast {
                 Divider()

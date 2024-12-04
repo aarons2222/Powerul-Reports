@@ -18,6 +18,8 @@ struct SettingsView: View {
     }()
     
     var body: some View {
+        
+        NavigationStack{
         VStack(spacing: 0) {
             // Custom Header
             CustomHeaderVIew(title: "Settings")
@@ -89,7 +91,8 @@ struct SettingsView: View {
                         
                         VStack(spacing: 1) {
                             NavigationLink {
-                                Text("Privacy Policy")  // Placeholder view
+                                PolicyView(policy: .privacy)
+                                
                             } label: {
                                 HStack {
                                     Text("Privacy Policy")
@@ -102,7 +105,7 @@ struct SettingsView: View {
                             }
                             
                             NavigationLink {
-                                Text("Terms of Service")  // Placeholder view
+                                PolicyView(policy: .terms)
                             } label: {
                                 HStack {
                                     Text("Terms of Service")
@@ -125,35 +128,14 @@ struct SettingsView: View {
                             .padding(.horizontal)
                         
                         VStack(spacing: 1) {
-                            NavigationLink {
-                                Text("Help Center")  // Placeholder view
-                            } label: {
-                                HStack {
-                                    Text("Help Center")
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .foregroundColor(.gray)
-                                }
-                                .padding()
-                                .background(Color.color0.opacity(0.3))
-                            }
+                        
                             
-                            NavigationLink {
-                                Text("Contact Support")  // Placeholder view
-                            } label: {
-                                HStack {
-                                    Text("Contact Support")
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .foregroundColor(.gray)
-                                }
-                                .padding()
-                                .background(Color.color0.opacity(0.3))
-                            }
+                            
+                        
                             
                             Link(destination: URL(string: "mailto:support@powerfulreports.com")!) {
                                 HStack {
-                                    Text("Email Support")
+                                    Text("Contact Support")
                                     Spacer()
                                     Image(systemName: "envelope")
                                         .foregroundColor(.gray)
@@ -187,9 +169,9 @@ struct SettingsView: View {
                             
                             
                             Spacer()
-                      
                             
-                         
+                            
+                            
                             
                         }
                         .cornerRadius(10)
@@ -197,10 +179,10 @@ struct SettingsView: View {
                 }
                 .padding()
                 
-            
-                    Text("Version - \(Bundle.main.appVersionLong) (\(Bundle.main.buildNumber))")
-                    
-                   
+                
+                Text("Version - \(Bundle.main.appVersionLong) (\(Bundle.main.buildNumber))")
+                
+                
             }
         }
         .navigationBarHidden(true)
@@ -208,6 +190,7 @@ struct SettingsView: View {
         .sheet(isPresented: $viewModel.showPaywall) {
             PaywallView()
         }
+    }
     }
 }
 

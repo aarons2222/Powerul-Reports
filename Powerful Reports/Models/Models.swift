@@ -140,6 +140,11 @@ enum TimeFilter: String, Codable, CaseIterable {
             return calendar.date(byAdding: .month, value: -12, to: now)!
         }
     }
+    
+    var dateInterval: DateInterval {
+        let now = Date()
+        return DateInterval(start: date, end: now)
+    }
 }
 
 
@@ -160,4 +165,3 @@ struct OutcomeData: Identifiable, Equatable {
                lhs.count == rhs.count
     }
 }
-

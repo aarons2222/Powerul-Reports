@@ -198,7 +198,7 @@ struct OffestedLoadingView: View {
                 }
                 .frame(width: 120, height: 120)
                 
-                Text("Loading Offsted website")
+                Text("Loading Ofsted website")
                     .foregroundColor(.white)
                     .opacity(isPulsing ? 0.6 : 1)
             }

@@ -307,10 +307,10 @@ struct HomeView: View {
         .scrollIndicators(.hidden)
         .scrollTargetBehavior(CustomScrollBehaviour())
             
-        .sheet(isPresented: $showSettings) {
-                SettingsView(viewModel: viewModel)
-                       .presentationDetents([.large])
-               }
+        .fullScreenCover(isPresented: $showSettings) {
+            SettingsView(viewModel: viewModel)
+        }
+   
             
             
         .navigationDestination(for: NavigationPath.self) { destination in
