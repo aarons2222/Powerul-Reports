@@ -126,36 +126,10 @@ struct AllAreas: View {
                                          } label: {
                                              
                         
+                                             AllCard(title: item.name, count: item.count)
+
                                              
-                                             
-                                             HStack(alignment: .center) {
-                                                 
-                                                 VStack(alignment: .leading, spacing: 5){
-                                                     
-                                                     
-                                                     Text(item.name)
-                                                         .font(.body)
-                                                         .foregroundStyle(.color4)
-                                                  
-                                                     
-                                                     
-                                                     Text("\(item.count) report\(item.count > 1 ? "s" : "")")
-                                                         .font(.callout)
-                                                         .foregroundColor(.gray)
-                                                     
-                                                     
-                                                 }
-                                                 
-                                                 Spacer()
-                                                 Image(systemName: "chevron.right.circle")
-                                                     .font(.title2)
-                                                     .foregroundColor(.color1)
-                                                 
-                                                 
-                                             }
-                                             .padding()
-                                             .background(.color0.opacity(0.3))
-                                             .cornerRadius(10)
+                                     
                                          }
                                          .buttonStyle(PlainButtonStyle())
                                          .padding(.bottom, 16)

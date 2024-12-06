@@ -209,6 +209,15 @@ class InspectionReportsViewModel: ObservableObject {
         guard let reportsCacheFile = reportsCacheFile else { return }
         
         do {
+            // Check if the cache file exists and compare content
+            if FileManager.default.fileExists(atPath: reportsCacheFile.path),
+               let existingData = try? Data(contentsOf: reportsCacheFile),
+               let existingReports = try? JSONDecoder().decode([Report].self, from: existingData),
+               existingReports.count == reports.count {
+                // Skip save if the number of reports is the same
+                return
+            }
+            
             let encoder = JSONEncoder()
             let data = try encoder.encode(reports)
             try data.write(to: reportsCacheFile)

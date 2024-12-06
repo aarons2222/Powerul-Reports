@@ -83,16 +83,13 @@ struct OutcomeRow: View {
                 .font(.body)
                 .foregroundColor(.color4)
 
-            
-            Text("\(count)")
-                .font(.body)
-                .foregroundColor(.color4)
+
             
                 Spacer()
         
             Text("\(count)")
                     .font(.body)
-                    .foregroundColor(.color4)
+                    .foregroundColor(.gray)
 
             Text("(\(String(format: "%.1f%%", Double(count) / Double(total) * 100)))")
                 .font(.footnote)

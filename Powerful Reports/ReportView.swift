@@ -10,6 +10,7 @@ import SwiftUI
 struct ReportView: View {
     var report: Report
     @State private var selectedTheme: String?
+    @State private var navigateToOfsted: Bool = false
     @Environment(\.colorScheme) var colorScheme
     
     init(report: Report) {
@@ -32,10 +33,8 @@ struct ReportView: View {
                             InfoRow(icon: "calendar", title: "Date", value: report.formattedDate)
                             InfoRow(icon: "building.2.fill", title: "Local Authority", value: report.localAuthority)
                             InfoRow(icon: "house.fill", title: "Type", value: report.typeOfProvision)
-                            
                             if (!report.previousInspection.contains("Not applicable")) {
                                 InfoRow(icon: "clock.fill", title: "Previous Inspection", value: report.previousInspection.replacingOccurrences(of: "inspection ", with: "" ))
-                                   
                             }
                         }
                     }
@@ -94,21 +93,23 @@ struct ReportView: View {
                         }
                     }
                 }
-                .padding()
+   
                 
-                
-                NavigationLink{
-                    OffestedView(URN: report.referenceNumber)
-                }label: {
-                    Text("View Full Report")
+                GlobalButton(title: "View Full Report") {
+                    navigateToOfsted = true
                 }
-                
                 .padding(.bottom, 50)
+          
             }
             .scrollIndicators(.hidden)
+            .padding()
+            
         }
         .ignoresSafeArea()
         .navigationBarHidden(true)
+        .navigationDestination(isPresented: $navigateToOfsted) {
+            OfstedView(URN: report.referenceNumber)
+        }
     }
 }
 
@@ -142,11 +143,10 @@ struct InfoRow: View {
 
 
 
-struct OffestedView: View {
+struct OfstedView: View {
     @State private var isLoading = false
     @State private var showingDetail = false
     @State private var selectedURL: URL?
-    
     
     var URN: String
     var body: some View {
@@ -161,6 +161,7 @@ struct OffestedView: View {
                 )
         
             
+         
             if isLoading {
                 OffestedLoadingView()
             }

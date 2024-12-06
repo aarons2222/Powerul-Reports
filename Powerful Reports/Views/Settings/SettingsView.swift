@@ -6,11 +6,15 @@
 //
 
 import SwiftUI
+import _StoreKit_SwiftUI
+
 
 struct SettingsView: View {
     @ObservedObject var viewModel: InspectionReportsViewModel
     @Environment(\.dismiss) var dismiss
-    
+    @EnvironmentObject var authModel: AuthenticationModel
+
+
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
@@ -25,8 +29,19 @@ struct SettingsView: View {
             CustomHeaderVIew(title: "Settings")
             
             ScrollView {
+                
+              
+                
+                
+            
+                
                 VStack(spacing: 24) {
                     // Account Management Section
+                    
+                
+                    
+                    
+                    
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Account")
                             .font(.headline)
@@ -45,6 +60,8 @@ struct SettingsView: View {
                                 }
                                 .padding()
                                 .background(Color.color0.opacity(0.3))
+                                
+                                
                             }
                             
                             Button {
@@ -67,17 +84,7 @@ struct SettingsView: View {
                                 .background(Color.color0.opacity(0.3))
                             }
                             
-                            Button(action: {
-                                // Handle sign out
-                            }) {
-                                HStack {
-                                    Text("Sign Out")
-                                        .foregroundColor(.red)
-                                    Spacer()
-                                }
-                                .padding()
-                                .background(Color.color0.opacity(0.3))
-                            }
+                      
                         }
                         .cornerRadius(10)
                     }
@@ -158,7 +165,7 @@ struct SettingsView: View {
                             // Last Update Time
                             if let lastUpdate = viewModel.lastFirebaseUpdate {
                                 HStack {
-                                    Text("Last Updated")
+                                    Text("Last Received Data")
                                     Spacer()
                                     Text(dateFormatter.string(from: lastUpdate))
                                         .foregroundColor(.secondary)
@@ -176,21 +183,57 @@ struct SettingsView: View {
                         }
                         .cornerRadius(10)
                     }
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                    
+                    Button(action: {
+                        authModel.signOut()
+                    }) {
+                        HStack {
+                            
+                            Text("Sign Out")
+                                .foregroundColor(.red)
+                            Spacer()
+                        }
+                        .padding()
+                        .background(Color.color0.opacity(0.3))
+                    }
                 }
                 .padding()
+            
+
                 
-                
+                .cornerRadius(10)
+            }
+            
                 Text("Version - \(Bundle.main.appVersionLong) (\(Bundle.main.buildNumber))")
                 
                 
             }
         }
+        .padding(.horizontal)
+            
         .navigationBarHidden(true)
         .ignoresSafeArea()
         .sheet(isPresented: $viewModel.showPaywall) {
-            PaywallView()
+            
+            
+            SubscriptionStoreView(groupID: "21595486") {
+                VStack {
+                    Text("Powerful Reports")
+                        .font(.largeTitle)
+                        .fontWeight(.black)
+                    
+                    Text("Access comprehensive reporting and analysis with our premium subscription!")
+                        .multilineTextAlignment(.center)
+                }
+                .foregroundStyle(.white)
+                .containerBackground(.blue.gradient, for: .subscriptionStore)
+            }
+            .storeButton(.visible, for: .restorePurchases)
+            .subscriptionStoreControlStyle(.prominentPicker)
         }
-    }
+      }
     }
 }
 
@@ -212,3 +255,5 @@ struct SettingsView_Previews: PreviewProvider {
         }
     }
 }
+
+

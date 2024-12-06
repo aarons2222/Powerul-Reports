@@ -7,10 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		93B3A6B42CFCC64800548BEB /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 93B3A6B32CFCC64800548BEB /* FirebaseFirestore */; };
+		939D3F532D00F76600B23C78 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 939D3F522D00F76600B23C78 /* FirebaseAuth */; };
+		939D3F552D00F76600B23C78 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 939D3F542D00F76600B23C78 /* FirebaseFirestore */; };
+		939D3F642D0113E800B23C78 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 939D3F632D0113E700B23C78 /* StoreKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		939D3F632D0113E700B23C78 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		93BA2D642CEAA1520025E019 /* Powerful Reports.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Powerful Reports.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -27,17 +30,28 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				93B3A6B42CFCC64800548BEB /* FirebaseFirestore in Frameworks */,
+				939D3F642D0113E800B23C78 /* StoreKit.framework in Frameworks */,
+				939D3F532D00F76600B23C78 /* FirebaseAuth in Frameworks */,
+				939D3F552D00F76600B23C78 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		939D3F622D0113E700B23C78 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				939D3F632D0113E700B23C78 /* StoreKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		93BA2D5B2CEAA1520025E019 = {
 			isa = PBXGroup;
 			children = (
 				93BA2D662CEAA1520025E019 /* Powerful Reports */,
+				939D3F622D0113E700B23C78 /* Frameworks */,
 				93BA2D652CEAA1520025E019 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -71,7 +85,8 @@
 			);
 			name = "Powerful Reports";
 			packageProductDependencies = (
-				93B3A6B32CFCC64800548BEB /* FirebaseFirestore */,
+				939D3F522D00F76600B23C78 /* FirebaseAuth */,
+				939D3F542D00F76600B23C78 /* FirebaseFirestore */,
 			);
 			productName = "Powerful Reports";
 			productReference = 93BA2D642CEAA1520025E019 /* Powerful Reports.app */;
@@ -102,7 +117,7 @@
 			mainGroup = 93BA2D5B2CEAA1520025E019;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				93B3A6B22CFCC64800548BEB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				939D3F512D00F76600B23C78 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 93BA2D652CEAA1520025E019 /* Products */;
@@ -292,9 +307,9 @@
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Powerful-Reports-Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -326,9 +341,9 @@
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Powerful-Reports-Info.plist";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -372,20 +387,25 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		93B3A6B22CFCC64800548BEB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+		939D3F512D00F76600B23C78 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 11.5.0;
+				minimumVersion = 11.6.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		93B3A6B32CFCC64800548BEB /* FirebaseFirestore */ = {
+		939D3F522D00F76600B23C78 /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 93B3A6B22CFCC64800548BEB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			package = 939D3F512D00F76600B23C78 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		939D3F542D00F76600B23C78 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 939D3F512D00F76600B23C78 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
 		};
 /* End XCSwiftPackageProductDependency section */

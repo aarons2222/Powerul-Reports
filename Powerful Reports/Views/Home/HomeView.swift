@@ -14,30 +14,21 @@ struct HomeView: View {
 
         @Namespace var hero
         @StateObject private var viewModel = InspectionReportsViewModel()
-    
-    
-        @Environment(\.colorScheme) private var scheme
-    
-    
-          @State var showSettings = false
-    
+    @Environment(\.colorScheme) private var scheme
+    @State var showSettings = false
     @AppStorage("selectedTimeFilter") private var selectedTimeFilter: TimeFilter = .last3Months
-
-    
-    
     @State private var path = [NavigationPath]()
-
-
+    @State private var isInitialized = false
     
         @Environment(\.horizontalSizeClass) var sizeClass
-        var gridColumns: [GridItem] {
-            if viewModel.reportsCount == 1 {
-                return [GridItem(.flexible(), spacing: 16)]
-            } else {
-                let columns = sizeClass == .regular ? 3 : 2
-                return Array(repeating: GridItem(.flexible(), spacing: 16), count: columns)
-            }
+    var gridColumns: [GridItem] {
+        if viewModel.reportsCount == 1 {
+            return [GridItem(.flexible(), spacing: 16)]
+        } else {
+            let columns = sizeClass == .regular ? 3 : 2
+            return Array(repeating: GridItem(.flexible(), spacing: 16), count: columns)
         }
+    }
     
     
     private var provisionTypeDistribution: [OutcomeData] {
@@ -367,11 +358,11 @@ struct HomeView: View {
 
      
     }
-        .onAppear {
-                    Task {
-                        await viewModel.filterReports(timeFilter: selectedTimeFilter)
+        .task {
+            guard !isInitialized else { return }
+            isInitialized = true
+            await viewModel.filterReports(timeFilter: selectedTimeFilter)
         }
-    }
       
         
     }

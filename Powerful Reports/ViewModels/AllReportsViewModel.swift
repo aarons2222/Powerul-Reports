@@ -122,6 +122,13 @@ import SwiftUI
     private let mainViewModel: InspectionReportsViewModel
     private let dateFormatter: DateFormatter
     
+    // Cache frequently accessed computed properties
+    private var cachedUniqueInspectors: [String] = []
+    private var cachedUniqueAuthorities: [String] = []
+    private var cachedUniqueProvisionTypes: [String] = []
+    private var cachedUniqueGradesAndOutcomes: [(String, Color)] = []
+    private var lastUpdateTimestamp: Date = .distantPast
+    
     init(mainViewModel: InspectionReportsViewModel) {
         self.mainViewModel = mainViewModel
         self.dateFormatter = DateFormatter()
@@ -178,26 +185,41 @@ import SwiftUI
         }
     }
     
-    var uniqueInspectors: [String] {
-        guard !mainViewModel.reports.isEmpty else { return [] }
-        return Array(Set(mainViewModel.reports.map { $0.inspector })).sorted()
-    }
-    
-    var uniqueAuthorities: [String] {
-        guard !mainViewModel.reports.isEmpty else { return [] }
-        return Array(Set(mainViewModel.reports.map { $0.localAuthority })).sorted()
-    }
-    
-    var uniqueProvisionTypes: [String] {
-        guard !mainViewModel.reports.isEmpty else { return [] }
-        return Array(Set(mainViewModel.reports.map { $0.typeOfProvision })).sorted()
-    }
-    
-    var uniqueGradesAndOutcomes: [(String, Color)] {
+    private func updateCacheIfNeeded() {
+        let now = Date()
+        // Only update cache if it's been more than 1 second since last update
+        guard now.timeIntervalSince(lastUpdateTimestamp) > 1.0 else { return }
+        
+        cachedUniqueInspectors = Array(Set(mainViewModel.reports.map { $0.inspector })).sorted()
+        cachedUniqueAuthorities = Array(Set(mainViewModel.reports.map { $0.localAuthority })).sorted()
+        cachedUniqueProvisionTypes = Array(Set(mainViewModel.reports.map { $0.typeOfProvision })).sorted()
+        
         let allValues = RatingValue.allCases
             .filter { $0 != .none }
             .map { ($0.rawValue, $0.color) }
-        return allValues.sorted { $0.0 < $1.0 }
+        cachedUniqueGradesAndOutcomes = allValues.sorted { $0.0 < $1.0 }
+        
+        lastUpdateTimestamp = now
+    }
+    
+    var uniqueInspectors: [String] {
+        updateCacheIfNeeded()
+        return cachedUniqueInspectors
+    }
+    
+    var uniqueAuthorities: [String] {
+        updateCacheIfNeeded()
+        return cachedUniqueAuthorities
+    }
+    
+    var uniqueProvisionTypes: [String] {
+        updateCacheIfNeeded()
+        return cachedUniqueProvisionTypes
+    }
+    
+    var uniqueGradesAndOutcomes: [(String, Color)] {
+        updateCacheIfNeeded()
+        return cachedUniqueGradesAndOutcomes
     }
     
     var availableInspectors: [String] {

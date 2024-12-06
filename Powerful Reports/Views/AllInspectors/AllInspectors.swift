@@ -116,34 +116,10 @@ struct AllInspectors: View {
                                        Button {
                                                    path.append(.inspectorProfile(item.name))
                                                } label: {
-                                           HStack(alignment: .center) {
-                                               
-                                               VStack(alignment: .leading, spacing: 5){
                                                    
                                                    
-                                                   Text(item.name)
-                                                       .font(.body)
-                                                       .foregroundStyle(.color4)
-                                                
-                                                   
-                                                   
-                                                   Text("\(item.count) report\(item.count > 1 ? "s" : "")")
-                                                       .font(.callout)
-                                                       .foregroundColor(.gray)
-                                                   
-                                                   
-                                               }
-                                               
-                                               Spacer()
-                                               Image(systemName: "chevron.right.circle")
-                                                   .font(.title2)
-                                                   .foregroundColor(.color1)
-                                               
-                                               
-                                           }
-                                           .padding()
-                                           .background(.color0.opacity(0.3))
-                                           .cornerRadius(10)
+                                                AllCard(title: item.name, count: item.count)
+                                     
                                        }
                                        .buttonStyle(PlainButtonStyle())
                                        .padding(.bottom, 16)
@@ -199,3 +175,42 @@ struct InstpectorData: Identifiable, Hashable {
 }
 
 
+
+
+struct AllCard: View{
+    
+    var title: String
+    var count: Int?
+    
+    var body: some View{
+        
+        HStack(alignment: .center) {
+            
+            VStack(alignment: .leading, spacing: 5){
+                
+                
+                Text(title)
+                    .font(.body)
+                    .foregroundStyle(.color4)
+             
+                
+                
+                Text("\(count ?? 0) report\(count ?? 0 > 1 ? "s" : "")")
+                    .font(.callout)
+                    .foregroundColor(.gray)
+                
+                
+            }
+            
+            Spacer()
+            Image(systemName: "chevron.right.circle")
+                .font(.title2)
+                .foregroundColor(.color1)
+            
+            
+        }
+        .padding()
+        .background(.color0.opacity(0.3))
+        .cornerRadius(10)
+    }
+}

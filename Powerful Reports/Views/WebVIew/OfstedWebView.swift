@@ -9,11 +9,13 @@
 import SwiftUI
 import WebKit
 
+
+
 struct OfstedWebView: UIViewRepresentable {
     let searchText: String
     @Binding var isLoading: Bool
     
-    class Coordinator: NSObject, WKNavigationDelegate {
+    class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         var parent: OfstedWebView
         var currentStep = 0 // 0: Initial, 1: Search Results, 2: First Result
         
@@ -22,7 +24,10 @@ struct OfstedWebView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-            parent.isLoading = true
+            // Only show loading for initial search
+            if currentStep == 0 {
+                parent.isLoading = true
+            }
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -36,11 +41,14 @@ struct OfstedWebView: UIViewRepresentable {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                     self.clickFirstResult(webView)
                 }
+                // Set loading to false after search results are loaded
+               
                 
             case 2:
                 DispatchQueue.main.async {
                     self.parent.isLoading = false
                 }
+                break
                 
             default:
                 break
@@ -88,13 +96,10 @@ struct OfstedWebView: UIViewRepresentable {
         }
         
         private func clickFirstResult(_ webView: WKWebView) {
-            // This script matches the exact structure from your screenshot
             let clickScript = """
                 function clickFirstResult() {
-                    // Log the current state for debugging
                     console.log('Starting click attempt');
                     
-                    // Try multiple approaches to find the link
                     const link = document.querySelector('ul.results-list.list-unstyled li.search-results h3.search-result__title a') ||
                                document.querySelector('a[href*="/provider/"]') ||
                                document.querySelector('.search-result__title a');
@@ -105,10 +110,8 @@ struct OfstedWebView: UIViewRepresentable {
                         return true;
                     }
                     
-                    // Log if we didn't find anything
                     console.log('No link found');
                     
-                    // Log the entire relevant HTML for debugging
                     const results = document.querySelector('.results-list');
                     if (results) {
                         console.log('Results HTML:', results.innerHTML);
@@ -122,7 +125,6 @@ struct OfstedWebView: UIViewRepresentable {
             webView.evaluateJavaScript(clickScript) { [weak self] (result, error) in
                 if let error = error {
                     print("Error clicking result: \(error)")
-                    // If click fails, try again after a short delay
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         self?.clickFirstResult(webView)
                     }
@@ -132,7 +134,6 @@ struct OfstedWebView: UIViewRepresentable {
                         self?.currentStep = 2
                     } else {
                         print("Failed to find link, will retry")
-                        // If click fails, try again after a short delay
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                             self?.clickFirstResult(webView)
                         }
@@ -142,9 +143,29 @@ struct OfstedWebView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            DispatchQueue.main.async {
-                self.parent.isLoading = false
+            if currentStep == 0 {
+                DispatchQueue.main.async {
+                    self.parent.isLoading = false
+                }
             }
+        }
+        
+        func webView(_ webView: WKWebView,
+                    createWebViewWith configuration: WKWebViewConfiguration,
+                    for navigationAction: WKNavigationAction,
+                    windowFeatures: WKWindowFeatures) -> WKWebView? {
+            if navigationAction.targetFrame == nil {
+                webView.load(navigationAction.request)
+            }
+            return nil
+        }
+        
+        func webView(_ webView: WKWebView,
+                    runJavaScriptAlertPanelWithMessage message: String,
+                    initiatedByFrame frame: WKFrameInfo,
+                    completionHandler: @escaping () -> Void) {
+            print("JavaScript Alert: \(message)")
+            completionHandler()
         }
     }
     
@@ -161,6 +182,7 @@ struct OfstedWebView: UIViewRepresentable {
         
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
+        webView.uiDelegate = context.coordinator
         
         if let url = URL(string: "https://reports.ofsted.gov.uk") {
             let request = URLRequest(url: url)
@@ -173,4 +195,3 @@ struct OfstedWebView: UIViewRepresentable {
     func updateUIView(_ webView: WKWebView, context: Context) {
     }
 }
-

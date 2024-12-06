@@ -77,6 +77,7 @@ struct OutcomesChartView: View {
                 .foregroundStyle(data.color)
             }
             .frame(height: 250)
+      
             
             VStack(alignment: .leading, spacing: 4) {
                        ForEach(Array(displayData.enumerated()), id: \.element.id) { index, data in
@@ -103,6 +104,7 @@ struct OutcomesChartView: View {
                }
                .padding()
                .cardBackground()
+               .drawingGroup() 
                .onAppear {
                    displayData = outcomeData
                    previousData = outcomeData
