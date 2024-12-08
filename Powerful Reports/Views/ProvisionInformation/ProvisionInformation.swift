@@ -199,15 +199,15 @@ struct ProvisionInformation: View {
             } else {
                 ScrollView {
                     VStack(spacing: 20) {
-                        CardView("Overall Distribution") {
+                        CustomCardView("Overall Distribution") {
                             ProvisionDistributionChart(providerData: providerData)
                         }
                         
-                        CardView("Success Rates") {
+                        CustomCardView("Success Rates") {
                             SuccessRateView(successRates: successRates)
                         }
                         
-                        CardView("Detailed Analysis") {
+                        CustomCardView("Detailed Analysis") {
                             DetailedAnalysisView(providerData: providerData)
                         }
                     }

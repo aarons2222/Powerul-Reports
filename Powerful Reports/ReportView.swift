@@ -26,7 +26,7 @@ struct ReportView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     // Report Information Card
-                    CardView("Report Information") {
+                    CustomCardView("Report Information") {
                         VStack(alignment: .leading, spacing: 16) {
                             InfoRow(icon: "number.circle.fill", title: "Reference", value: report.referenceNumber)
                             InfoRow(icon: "person.fill", title: "Inspector", value: report.inspector)
@@ -40,7 +40,7 @@ struct ReportView: View {
                     }
                     
                     // Grade Card
-                    CardView("Grade") {
+                    CustomCardView("Grade") {
                         VStack(alignment: .leading, spacing: 12) {
                             if (!report.outcome.isEmpty) {
                                 HStack {
@@ -67,7 +67,7 @@ struct ReportView: View {
                     }
                     
                     // Themes Card
-                    CardView("Themes") {
+                    CustomCardView("Themes") {
                         LazyVGrid(columns: [
                             GridItem(.adaptive(minimum: 150), spacing: 12)
                         ], spacing: 12) {

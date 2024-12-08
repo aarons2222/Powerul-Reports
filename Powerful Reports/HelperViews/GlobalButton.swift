@@ -31,7 +31,7 @@ struct GlobalButton: View {
                 .background(backgroundColor)
                 .clipShape(RoundedRectangle(cornerRadius: 25))
         }
-        .padding(.vertical, 24)
+        .frame(height: 50)
     
     }
 }

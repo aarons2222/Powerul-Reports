@@ -41,7 +41,7 @@ struct InspectorProfileView: View {
             CustomHeaderVIew(title: profile.name)
             
             ScrollView {
-                CardView("Recent Reports",
+                CustomCardView("Recent Reports",
                          navigationLink: recentReports.count > 5 ?
                          AnyView(
                             Button(action: {
@@ -64,14 +64,14 @@ struct InspectorProfileView: View {
                 }
                 .padding(.bottom)
                 
-                CardView("Local Authorities Inspected") {
+                CustomCardView("Local Authorities Inspected") {
                     ForEach(Array(profile.areas.keys.sorted()), id: \.self) { area in
                         LabeledContent(area, value: "\(profile.areas[area] ?? 0)")
                     }
                 }
                 .padding(.bottom)
                 
-                CardView("Popular themes") {
+                CustomCardView("Popular themes") {
                     ForEach(statistics.topThemes.prefix(10), id: \.topic) { themeFreq in
                         HStack {
                             Text(themeFreq.topic)
@@ -83,7 +83,7 @@ struct InspectorProfileView: View {
                 }
                 .padding(.bottom)
                 
-                CardView("Outcomes") {
+                CustomCardView("Outcomes") {
                     Chart {
                         ForEach(Array(profile.grades), id: \.key) { grade, count in
                             SectorMark(

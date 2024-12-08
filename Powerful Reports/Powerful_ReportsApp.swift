@@ -9,51 +9,11 @@ import SwiftUI
 import Firebase
 import FirebaseAuth
 
-class AuthenticationModel: ObservableObject {
-    @Published var user: User?
-    @Published var isAuthenticated = false
-    @Published var errorMessage = ""
-    
-    
-
-
-    init() {
-        Auth.auth().addStateDidChangeListener { [weak self] _, user in
-            self?.user = user
-            self?.isAuthenticated = user != nil
-        }
-    }
-    
-    func signUp(email: String, password: String) {
-        Auth.auth().createUser(withEmail: email, password: password) { [weak self] result, error in
-            if let error = error {
-                self?.errorMessage = error.localizedDescription
-            } else {
-                self?.errorMessage = ""
-            }
-        }
-    }
-    
-    func signIn(email: String, password: String) {
-        Auth.auth().signIn(withEmail: email, password: password) { [weak self] result, error in
-            if let error = error {
-                self?.errorMessage = error.localizedDescription
-            } else {
-                self?.errorMessage = ""
-            }
-        }
-    }
-    
-    func signOut() {
-        try? Auth.auth().signOut()
-    }
-}
-
 
 @main
 struct Powerful_ReportsApp: App {
     @StateObject private var viewModel = InspectionReportsViewModel()
-    @StateObject private var authModel = AuthenticationModel()
+    @StateObject private var authModel = AuthenticationViewModel()
     @State private var isActive = false
     
     init() {
@@ -62,18 +22,30 @@ struct Powerful_ReportsApp: App {
     
     var body: some Scene {
         WindowGroup {
-            if isActive {
-                if authModel.isAuthenticated {
-                    HomeView()
-                        .environmentObject(viewModel)
-                        .environmentObject(authModel)
+            ZStack {
+                if authModel.isInitializing {
+                    // Show a loading view or splash screen
+                    Color.color3.opacity(0.3)
+                        .ignoresSafeArea()
+                        .overlay(
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle())
+                        )
                 } else {
-                    LoginRegView()
-                        .environmentObject(authModel)
+                    if isActive {
+                        if authModel.isAuthenticated {
+                            HomeView()
+                                .environmentObject(viewModel)
+                                .environmentObject(authModel)
+                        } else {
+                            SignInWithApple()
+                                .environmentObject(authModel)
+                        }
+                    } else {
+                        SplashScreen(isActive: $isActive)
+                            .ignoresSafeArea()
+                    }
                 }
-            } else {
-                SplashScreen(isActive: $isActive)
-                    .ignoresSafeArea()
             }
         }
     }
@@ -142,4 +114,3 @@ struct SplashScreen: View {
         }
     }
 }
-

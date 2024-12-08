@@ -152,7 +152,40 @@ struct HomeView: View {
                     .frame(height: 125)
                 })
                 
+    
+                
+                
                 LazyVStack(spacing: 15) {
+                    
+           
+                    
+                    if !viewModel.isPremium {
+                        
+                        CustomCardView("Demo Mode"){
+                            HStack(spacing: 12) {
+                                Image(systemName: "info.circle.fill")
+                                    .foregroundColor(.color2)
+                                
+                           
+                                    
+                                    Text("You're viewing demo data. Upgrade to Premium to access real inspection reports.")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                
+                            
+                                Spacer()
+                                
+                                Button("Upgrade") {
+                                    viewModel.showPaywall = true
+                                }
+                                .foregroundColor(.color2)
+                                .font(.subheadline.bold())
+                            }
+                            .padding()
+                        }
+                        .padding()
+                    }
+                    
 
                     
                     SegmentedControl(
@@ -409,7 +442,7 @@ struct HomeView: View {
                         .font(.largeTitle)
                         .fontWeight(.regular)
                     
-                    Text("Total Reports")
+                    Text("\(!viewModel.isPremium ? "Sample" : "Total")  Reports")
                         .font(.callout)
                     
                   

@@ -90,7 +90,7 @@ struct AreaView: View {
            
                 
                 // Grades Card
-                CardView("Outcomes") {
+                CustomCardView("Outcomes") {
                     
                     
                     Chart(gradePercentages,  id: \.grade) { item in
@@ -131,7 +131,7 @@ struct AreaView: View {
             
                 
                 // Provision Types Card
-                CardView("Provider Types") {
+                CustomCardView("Provider Types") {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(Array(area.provisionTypes.keys.sorted()), id: \.self) { type in
                             HStack {
@@ -145,7 +145,7 @@ struct AreaView: View {
                 }
                 
                 // Top Themes Card
-                CardView("Most Common Themes") {
+                CustomCardView("Most Common Themes") {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(statistics.topThemes.prefix(10)) { theme in
                             HStack {
@@ -159,7 +159,7 @@ struct AreaView: View {
                 }
                 
                 
-                CardView("Inspectors") {
+                CustomCardView("Inspectors") {
                     VStack(alignment: .leading, spacing: 8) {
                         
                         ForEach(Array(area.inspectors.sorted(by: { $0.key < $1.key })), id: \.key) { inspector, count in

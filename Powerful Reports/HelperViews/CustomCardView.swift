@@ -8,7 +8,7 @@ import SwiftUI
 
 
 
-struct CardView<Content: View>: View {
+struct CustomCardView<Content: View>: View {
     let title: String
     let content: Content
     let navigationLink: AnyView?

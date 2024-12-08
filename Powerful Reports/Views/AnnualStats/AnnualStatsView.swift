@@ -7,75 +7,133 @@ struct AnnualStatsView: View {
     @State private var selectedMonth: (month: String, count: Int, displayMonth: String)?
     @State private var selectedX: CGFloat?
     
+    private let minInspectionsRequired = 5 // Minimum inspections required for inclusion
+    
     private struct MonthKey: Hashable {
         let sortKey: String
         let displayKey: String
     }
     
-    private var monthlyInspectionCounts: [(month: String, count: Int, displayMonth: String)] {
+    private struct MonthlyInspectionCount {
+        let month: String
+        let count: Int
+        let date: Date
+    }
+    
+    private var monthlyInspectionCounts: [MonthlyInspectionCount] {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "dd/MM/yyyy"
-        let monthFormatter = DateFormatter()
-        monthFormatter.dateFormat = "yyyy-MM"
-        let displayFormatter = DateFormatter()
-        displayFormatter.dateFormat = "MMM yy"
         
-        let groupedByMonth = Dictionary(grouping: viewModel.reports) { report in
+        let displayFormatter = DateFormatter()
+        displayFormatter.dateFormat = "MMM"
+        
+        let counts = Dictionary(grouping: viewModel.reports) { report in
             if let dateStr = report.date.components(separatedBy: " - ").last?.trimmingCharacters(in: .whitespaces),
                let date = dateFormatter.date(from: dateStr) {
-                return MonthKey(
-                    sortKey: monthFormatter.string(from: date),
-                    displayKey: displayFormatter.string(from: date)
-                )
+                let components = Calendar.current.dateComponents([.year, .month], from: date)
+                return String(format: "%04d-%02d", components.year!, components.month!)
             }
-            return MonthKey(sortKey: "Unknown", displayKey: "Unknown")
+            return "Unknown"
         }
+        .filter { $0.key != "Unknown" }
+        .map { key, reports in
+            let monthFormatter = DateFormatter()
+            monthFormatter.dateFormat = "yyyy-MM"
+            let date = monthFormatter.date(from: key) ?? Date()
+            let month = displayFormatter.string(from: date)
+            return MonthlyInspectionCount(month: month, count: reports.count, date: date)
+        }
+        .sorted { $0.date < $1.date }
+        .suffix(12)  // Only show last 12 months
         
-        return groupedByMonth
-            .filter { $0.key.sortKey != "Unknown" }
-            .map { (month: $0.key.sortKey, count: $0.value.count, displayMonth: $0.key.displayKey) }
-            .sorted { $0.month < $1.month }
-            .suffix(12)
+        return Array(counts)
     }
     
     private func isSuccessful(_ report: Report) -> Bool {
-        // For childminder inspections (using outcome)
+        // For childminder inspections, check if "Met" is the outcome
         if report.typeOfProvision.contains("Childminder") {
             return report.outcome == "Met"
         }
         
-        // For other inspections (using overall effectiveness)
+        // For other inspections, check for "Good" or "Outstanding" in overall effectiveness
         if let overallRating = report.ratings.first(where: { $0.category == "Overall effectiveness" }) {
-            return ["Outstanding", "Good"].contains(overallRating.rating)
+            return overallRating.rating == "Good" || overallRating.rating == "Outstanding"
         }
         
         return false
     }
     
-    private var inspectorPerformance: [(inspector: String, avgRating: Double, inspectionCount: Int)] {
+    private func hasOutstandingGrade(_ report: Report) -> Bool {
+        // For childminder inspections, they can't get Outstanding
+        if report.typeOfProvision.contains("Childminder") {
+            return false
+        }
+        
+        // Check for Outstanding in overall effectiveness
+        if let overallRating = report.ratings.first(where: { $0.category == "Overall effectiveness" }) {
+            return overallRating.rating == "Outstanding" || overallRating.rating == "1"
+        }
+        
+        return false
+    }
+    
+    private var inspectorPerformance: [(inspector: String, totalInspections: Int, outstandingCount: Int)] {
         let inspectorGroups = Dictionary(grouping: viewModel.reports) { $0.inspector }
         
         return inspectorGroups.compactMap { inspector, reports in
             guard !reports.isEmpty else { return nil }
             
-            let successfulInspections = reports.filter(isSuccessful).count
-            let avgRating = Double(successfulInspections) / Double(reports.count) * 100
-            return (inspector: inspector, avgRating: avgRating, inspectionCount: reports.count)
+            let outstandingInspections = reports.filter(hasOutstandingGrade).count
+            
+            return (
+                inspector: inspector,
+                totalInspections: reports.count,
+                outstandingCount: outstandingInspections
+            )
         }
-        .sorted { $0.avgRating > $1.avgRating }
+        .sorted { $0.outstandingCount > $1.outstandingCount } // Sort by number of Outstanding grades
+        .prefix(5) // Show top 5 inspectors
+        .filter { $0.outstandingCount > 0 } // Only show inspectors who have Outstanding grades
     }
     
-    private var localAuthorityPerformance: [(authority: String, successRate: Double)] {
+    private var localAuthorityPerformance: [(authority: String, successRate: Double, totalInspections: Int)] {
         let authorityGroups = Dictionary(grouping: viewModel.reports) { $0.localAuthority }
         
         return authorityGroups.compactMap { authority, reports in
-            guard !reports.isEmpty else { return nil }
+            guard !reports.isEmpty && reports.count >= minInspectionsRequired else { return nil }
             
             let successfulInspections = reports.filter(isSuccessful).count
-            let successRate = Double(successfulInspections) / Double(reports.count) * 100
-            return (authority: authority, successRate: successRate)
+            let successRate = Double(successfulInspections) / Double(reports.count)
+            
+            // Wilson score lower bound calculation
+            let n = Double(reports.count)
+            let p = successRate
+            let z = 1.96 // 95% confidence level
+            
+            let left = p + (z * z) / (2 * n)
+            let right = z * sqrt((p * (1 - p) + (z * z) / (4 * n)) / n)
+            let under = 1 + (z * z) / n
+            
+            let score = ((left - right) / under) * 100
+            
+            return (
+                authority: authority,
+                successRate: p * 100, // Original success rate for display
+                totalInspections: reports.count
+            )
         }
-        .sorted { $0.successRate > $1.successRate }
+        .sorted { a, b in
+            // Primary sort by total successful inspections
+            let aSuccessful = Double(a.totalInspections) * (a.successRate / 100)
+            let bSuccessful = Double(b.totalInspections) * (b.successRate / 100)
+            
+            if abs(aSuccessful - bSuccessful) > 1 {
+                return aSuccessful > bSuccessful
+            }
+            
+            // Secondary sort by success rate if total successful inspections are close
+            return a.successRate > b.successRate
+        }
     }
     
     var body: some View {
@@ -84,193 +142,140 @@ struct AnnualStatsView: View {
             
             ScrollView {
                 VStack(spacing: 20) {
-                    // Monthly Inspection Trend
-                    CardView("Monthly Inspection Count") {
-                        VStack(alignment: .leading, spacing: 8) {
-                            ZStack(alignment: .topLeading) {
-                                Chart {
-                                    ForEach(monthlyInspectionCounts, id: \.month) { item in
-                                        LineMark(
-                                            x: .value("Month", item.displayMonth),
-                                            y: .value("Inspections", item.count)
-                                        )
-                                        .foregroundStyle(.color1)
-                                        .interpolationMethod(.catmullRom)
-                                        .symbol {
-                                            Circle()
-                                                .fill(.color2)
-                                                .frame(width: 8, height: 8)
-                                        }
-                                        .symbolSize(30)
-                                        
-                                        AreaMark(
-                                            x: .value("Month", item.displayMonth),
-                                            y: .value("Inspections", item.count)
-                                        )
-                                        .foregroundStyle(
-                                            .linearGradient(
-                                                colors: [.color1.opacity(0.3), .clear],
-                                                startPoint: .top,
-                                                endPoint: .bottom
-                                            )
-                                        )
-                                        .interpolationMethod(.catmullRom)
-                                    }
-                                    
-                                    if let selected = selectedMonth {
-                                        RuleMark(
-                                            x: .value("Selected", selected.displayMonth)
-                                        )
-                                        .foregroundStyle(.color2)
-                                        .lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 5]))
-                                        
-                                        PointMark(
-                                            x: .value("Month", selected.displayMonth),
-                                            y: .value("Count", selected.count)
-                                        )
-                                        .foregroundStyle(.color2)
-                                        .symbolSize(100)
-                                    }
+                    // Monthly Inspection Count
+                    CustomCardView("Monthly Inspection Count") {
+                        VStack(alignment: .leading, spacing: 16) {
+                            // Chart
+                            Chart {
+                                ForEach(monthlyInspectionCounts, id: \.month) { item in
+                                    BarMark(
+                                        x: .value("Month", item.month),
+                                        y: .value("Count", item.count)
+                                    )
+                                    .foregroundStyle(Color.color2.gradient)
+                                    .cornerRadius(4)
                                 }
-                                .chartXAxis {
-                                    AxisMarks { value in
-                                        AxisValueLabel {
-                                            if let str = value.as(String.self) {
-                                                Text(str)
-                                                    .font(.caption)
-                                                    .rotationEffect(.degrees(-45))
-                                                    .offset(y: 10)
-                                            }
+                            }
+                            .chartXAxis {
+                                AxisMarks(values: .automatic) { value in
+                                    AxisValueLabel {
+                                        if let month = value.as(String.self) {
+                                            Text(month)
+                                                .font(.caption)
                                         }
-                                    }
-                                }
-                                .chartYAxis {
-                                    AxisMarks { value in
-                                        AxisValueLabel {
-                                            if let count = value.as(Int.self) {
-                                                Text("\(count)")
-                                                    .font(.caption)
-                                            }
-                                        }
-                                    }
-                                }
-                                .frame(height: 240)
-                                .padding(.bottom, 40) // Add extra padding for x-axis labels
-                                .chartOverlay { proxy in
-                                    GeometryReader { geometry in
-                                        Rectangle()
-                                            .fill(.clear)
-                                            .contentShape(Rectangle())
-                                            .gesture(
-                                                DragGesture(minimumDistance: 0)
-                                                    .onChanged { value in
-                                                        let currentX = value.location.x
-                                                        guard currentX >= 0,
-                                                              currentX <= geometry.size.width,
-                                                              let month = proxy.value(atX: currentX, as: String.self) else {
-                                                            return
-                                                        }
-                                                        
-                                                        if let item = monthlyInspectionCounts.first(where: { $0.displayMonth == month }) {
-                                                            selectedMonth = item
-                                                            selectedX = currentX
-                                                        }
-                                                    }
-                                                    .onEnded { _ in
-                                                        withAnimation(.easeOut) {
-                                                            selectedMonth = nil
-                                                            selectedX = nil
-                                                        }
-                                                    }
-                                            )
                                     }
                                 }
                             }
-                            .padding(.horizontal, 8)
+                            .chartYAxis {
+                                AxisMarks(position: .leading) { value in
+                                    AxisValueLabel {
+                                        if let count = value.as(Int.self) {
+                                            Text("\(count)")
+                                                .font(.caption)
+                                        }
+                                    }
+                                }
+                            }
+                            .frame(height: 200)
                             
-                            if let selected = selectedMonth {
-                                HStack {
-                                    VStack(alignment: .leading) {
-                                        Text(selected.displayMonth)
-                                            .font(.headline)
-                                        Text("\(selected.count) inspections")
-                                            .foregroundColor(.color1)
-                                            .font(.subheadline)
-                                    }
-                                    Spacer()
-                                }
-                                .padding(.vertical, 8)
-                                .padding(.horizontal, 12)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(.color1.opacity(0.1))
-                                )
-                                .transition(.scale.combined(with: .opacity))
-                            }
+                        
                         }
-                        .padding(.bottom, 20)
                         .padding()
                     }
                     
                     // Top Performing Local Authorities
-                    CardView("Top Performing Local Authorities") {
+                    CustomCardView("Top Performing Local Authorities") {
                         VStack(alignment: .leading, spacing: 12) {
                             ForEach(localAuthorityPerformance.prefix(5), id: \.authority) { item in
                                 HStack {
                                     Text(item.authority)
                                         .font(.subheadline)
-                                        .foregroundColor(.color4)
+                                        .foregroundColor(.primary)
+                                        .lineLimit(1)
                                     
                                     Spacer()
                                     
-                                    Text(String(format: "%.1f%%", item.successRate))
-                                        .font(.headline)
-                                        .foregroundColor(.color1)
+                                    VStack(alignment: .trailing, spacing: 4) {
+                                        Text("\(Int(round(item.successRate)))%")
+                                            .font(.headline)
+                                            .foregroundColor(.color2)
+                                        
+                                        Text("of \(item.totalInspections) reports")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
                                 }
                                 
                                 if item.authority != localAuthorityPerformance.prefix(5).last?.authority {
                                     Divider()
                                 }
                             }
+                            
+                            Divider()
+                                .padding(.vertical, 8)
+                            
+                            // Key explanation
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Success Rate Criteria:")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .fontWeight(.medium)
+                                
+                                Text("• Childminders: 'Met' outcomes")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                
+                                Text("• Other providers: 'Good' or 'Outstanding' grades")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                
+                                Text("• Minimum \(minInspectionsRequired) inspections required")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                
+                                Text("• Ranking considers both success rate and number of reports")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.horizontal, 4)
                         }
                         .padding()
                     }
                     
                     // Inspector Performance
-                    CardView("Inspector Performance") {
+                    CustomCardView("Most Outstanding Grades Given") {
                         VStack(alignment: .leading, spacing: 12) {
-                            ForEach(inspectorPerformance.prefix(5), id: \.inspector) { item in
-                                VStack(alignment: .leading, spacing: 4) {
+                            ForEach(inspectorPerformance, id: \.inspector) { item in
+                                HStack {
                                     Text(item.inspector)
                                         .font(.subheadline)
-                                        .foregroundColor(.color4)
+                                        .foregroundColor(.primary)
+                                        .lineLimit(1)
                                     
-                                    HStack {
-                                        GeometryReader { geometry in
-                                            RoundedRectangle(cornerRadius: 4)
-                                                .fill(Color.color1.opacity(0.3))
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 4)
-                                                        .fill(Color.color1)
-                                                        .frame(width: geometry.size.width * CGFloat(item.avgRating / 100))
-                                                    , alignment: .leading
-                                                )
-                                        }
-                                        .frame(height: 8)
+                                    Spacer()
+                                    
+                                    VStack(alignment: .trailing, spacing: 4) {
+                                        Text("\(item.outstandingCount)")
+                                            .font(.headline)
+                                            .foregroundColor(.color2)
                                         
-                                        Text("\(Int(item.avgRating))%")
+                                        Text("of \(item.totalInspections) reports")
                                             .font(.caption)
-                                            .foregroundColor(.gray)
-                                        
-                                        Text("(\(item.inspectionCount) inspections)")
-                                            .font(.caption)
-                                            .foregroundColor(.gray)
+                                            .foregroundColor(.secondary)
                                     }
                                 }
                                 
-                                if item.inspector != inspectorPerformance.prefix(5).last?.inspector {
+                                if item.inspector != inspectorPerformance.last?.inspector {
                                     Divider()
                                 }
+                            }
+                            
+                            if inspectorPerformance.isEmpty {
+                                Text("No Outstanding grades recorded")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                    .padding()
                             }
                         }
                         .padding()
