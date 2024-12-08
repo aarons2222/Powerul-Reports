@@ -71,29 +71,37 @@ struct AnnualStatsView: View {
         
         // Check for Outstanding in overall effectiveness
         if let overallRating = report.ratings.first(where: { $0.category == "Overall effectiveness" }) {
-            return overallRating.rating == "Outstanding" || overallRating.rating == "1"
+            return overallRating.rating == "Outstanding"
         }
         
         return false
     }
     
+    private func countOutstandingGrades(in reports: [Report]) -> Int {
+        reports.filter { report in
+            if let overallRating = report.ratings.first(where: { $0.category == "Overall effectiveness" }) {
+                return overallRating.rating == "Outstanding"
+            }
+            return false
+        }.count
+    }
+
     private var inspectorPerformance: [(inspector: String, totalInspections: Int, outstandingCount: Int)] {
         let inspectorGroups = Dictionary(grouping: viewModel.reports) { $0.inspector }
         
-        return inspectorGroups.compactMap { inspector, reports in
-            guard !reports.isEmpty else { return nil }
-            
-            let outstandingInspections = reports.filter(hasOutstandingGrade).count
-            
+        let performance = inspectorGroups.map { inspector, reports in
+            let outstandingCount = countOutstandingGrades(in: reports)
             return (
                 inspector: inspector,
                 totalInspections: reports.count,
-                outstandingCount: outstandingInspections
+                outstandingCount: outstandingCount
             )
         }
-        .sorted { $0.outstandingCount > $1.outstandingCount } // Sort by number of Outstanding grades
-        .prefix(5) // Show top 5 inspectors
-        .filter { $0.outstandingCount > 0 } // Only show inspectors who have Outstanding grades
+        
+        return Array(performance
+            .filter { $0.outstandingCount > 0 && $0.totalInspections >= minInspectionsRequired }
+            .sorted { $0.outstandingCount > $1.outstandingCount } // Sort by total Outstanding count
+            .prefix(5)) // Show top 5 inspectors
     }
     
     private var localAuthorityPerformance: [(authority: String, successRate: Double, totalInspections: Int)] {
@@ -118,7 +126,7 @@ struct AnnualStatsView: View {
             
             return (
                 authority: authority,
-                successRate: p * 100, // Original success rate for display
+                successRate: p * 100, 
                 totalInspections: reports.count
             )
         }
@@ -221,13 +229,10 @@ struct AnnualStatsView: View {
                                     .foregroundColor(.secondary)
                                     .fontWeight(.medium)
                                 
-                                Text("• Childminders: 'Met' outcomes")
+                                Text("• Providers receiving ‘Good’ or ‘Outstanding’ grade or a ‘Met’ outcome")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                 
-                                Text("• Other providers: 'Good' or 'Outstanding' grades")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
                                 
                                 Text("• Minimum \(minInspectionsRequired) inspections required")
                                     .font(.caption)
@@ -245,37 +250,40 @@ struct AnnualStatsView: View {
                     // Inspector Performance
                     CustomCardView("Most Outstanding Grades Given") {
                         VStack(alignment: .leading, spacing: 12) {
-                            ForEach(inspectorPerformance, id: \.inspector) { item in
-                                HStack {
-                                    Text(item.inspector)
-                                        .font(.subheadline)
-                                        .foregroundColor(.primary)
-                                        .lineLimit(1)
-                                    
-                                    Spacer()
-                                    
-                                    VStack(alignment: .trailing, spacing: 4) {
-                                        Text("\(item.outstandingCount)")
-                                            .font(.headline)
-                                            .foregroundColor(.color2)
-                                        
-                                        Text("of \(item.totalInspections) reports")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                }
-                                
-                                if item.inspector != inspectorPerformance.last?.inspector {
-                                    Divider()
-                                }
-                            }
-                            
                             if inspectorPerformance.isEmpty {
                                 Text("No Outstanding grades recorded")
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
                                     .frame(maxWidth: .infinity, alignment: .center)
                                     .padding()
+                            } else {
+                                ForEach(Array(inspectorPerformance), id: \.inspector) { item in
+                                    HStack {
+                                        Text(item.inspector)
+                                            .font(.subheadline)
+                                            .foregroundColor(.primary)
+                                            .lineLimit(1)
+                                        
+                                        Spacer()
+                                        
+                                        VStack(alignment: .trailing, spacing: 4) {
+                                            HStack(spacing: 4) {
+                                                Text("\(item.outstandingCount)")
+                                                    .font(.headline)
+                                                    .foregroundColor(.color2)
+                                         
+                                            }
+                                            
+                                            Text("\(Int((Double(item.outstandingCount) / Double(item.totalInspections)) * 100))% of \(item.totalInspections) reports")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                    
+                                    if item.inspector != inspectorPerformance.last?.inspector {
+                                        Divider()
+                                    }
+                                }
                             }
                         }
                         .padding()

@@ -9,7 +9,7 @@
       }
     ]
   },
-  "identifier" : "DADF5432",
+  "identifier" : "368B7BA0",
   "nonRenewingSubscriptions" : [
 
   ],
@@ -18,14 +18,11 @@
   ],
   "settings" : {
     "_applicationInternalID" : "6738889825",
-    "_compatibilityTimeRate" : {
-      "3" : 6
-    },
     "_developerTeamID" : "SPBTU747B4",
     "_failTransactionsEnabled" : false,
-    "_lastSynchronizedDate" : 755044967.31989205,
-    "_locale" : "en_GB",
-    "_storefront" : "GBR",
+    "_lastSynchronizedDate" : 755386608.77424204,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
     "_storeKitErrors" : [
       {
         "current" : null,
@@ -48,10 +45,7 @@
         "name" : "App Store Sync"
       },
       {
-        "current" : {
-          "index" : 2,
-          "type" : "generic"
-        },
+        "current" : null,
         "enabled" : false,
         "name" : "Subscription Status"
       },
@@ -75,8 +69,7 @@
         "enabled" : false,
         "name" : "Offer Code Redeem Sheet"
       }
-    ],
-    "_timeRate" : 1001
+    ]
   },
   "subscriptionGroups" : [
     {

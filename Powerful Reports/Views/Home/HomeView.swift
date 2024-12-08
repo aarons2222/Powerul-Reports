@@ -7,14 +7,23 @@
 
 import SwiftUI
 import Charts
-
+import StoreKit
 
 
 struct HomeView: View {
+    
+    @State private var showScriptionView: Bool = false
+    @State private var status: EntitlementTaskState<SubscriptionStatus> = .loading
+    @State private var presentingSubscriptionSheet = false
+    
+    @Environment(\.subscriptionIDs) private var subscriptionIDs
+    
+    
 
-        @Namespace var hero
-        @StateObject private var viewModel = InspectionReportsViewModel()
+    @Namespace var hero
+    @StateObject private var viewModel = InspectionReportsViewModel()
     @Environment(\.colorScheme) private var scheme
+    @Environment(SubscriptionStatusModel.self) private var subscriptionStatusModel
     @State var showSettings = false
     @AppStorage("selectedTimeFilter") private var selectedTimeFilter: TimeFilter = .last3Months
     @State private var path = [NavigationPath]()
@@ -143,7 +152,6 @@ struct HomeView: View {
                             }
                             .scrollTargetLayout()
                         }
-                        
                         .scrollTargetBehavior(.paging)
                         .scrollClipDisabled()
                         .scrollIndicators(.hidden)
@@ -159,34 +167,33 @@ struct HomeView: View {
                     
            
                     
-                    if !viewModel.isPremium {
-                        
-                        CustomCardView("Demo Mode"){
-                            HStack(spacing: 12) {
-                                Image(systemName: "info.circle.fill")
-                                    .foregroundColor(.color2)
-                                
-                           
+                    if subscriptionStatusModel.subscriptionStatus == .notSubscribed {
+                        CustomCardView("Demo Mode") {
+                            Button {
+                                viewModel.showPaywall = true
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "info.circle.fill")
+                                        .foregroundColor(.color2)
                                     
-                                    Text("You're viewing demo data. Upgrade to Premium to access real inspection reports.")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                
-                            
-                                Spacer()
-                                
-                                Button("Upgrade") {
-                                    viewModel.showPaywall = true
+                             
+                                        
+                                        Text("You're viewing demo data. Upgrade to access your reports.")
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    
+                                    
+                                    Spacer()
+                                    
+                                    Text("Upgrade")
+                                        .foregroundColor(.color2)
+                                        .font(.subheadline.bold())
                                 }
-                                .foregroundColor(.color2)
-                                .font(.subheadline.bold())
+                                .padding()
                             }
-                            .padding()
                         }
-                        .padding()
+                        .padding(.horizontal)
                     }
-                    
-
                     
                     SegmentedControl(
                         tabs: TimeFilter.allCases,
@@ -333,6 +340,7 @@ struct HomeView: View {
             
         .fullScreenCover(isPresented: $showSettings) {
             SettingsView(viewModel: viewModel)
+                .environment(subscriptionStatusModel)
         }
    
             
@@ -397,6 +405,26 @@ struct HomeView: View {
             await viewModel.filterReports(timeFilter: selectedTimeFilter)
         }
       
+        
+                .subscriptionStatusTask(for: subscriptionIDs.group) { taskStatus in
+                    self.status = await taskStatus.map { statuses in
+                        await ProductSubscription.shared.status(
+                            for: statuses,
+                            ids: subscriptionIDs
+                        )
+                    }
+                    switch self.status {
+                    case .failure(let error):
+                        subscriptionStatusModel.subscriptionStatus = .notSubscribed
+                        print("Failed to check subscription status: \(error)")
+                    case .success(let status):
+                        subscriptionStatusModel.subscriptionStatus = status
+                        print("Updated subscription status to: \(status)")
+                    case .loading: break
+                    @unknown default: break
+                    }
+                }
+               
         
     }
     

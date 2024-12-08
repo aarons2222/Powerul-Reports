@@ -118,7 +118,7 @@ struct DummyDataGenerator {
         }
         
         // Update the generate function to pass count to generateTimestamp
-        static func generateDummyReports(count: Int = 500) -> [Report] {
+        static func generateDummyReports(count: Int = 100) -> [Report] {
             let generator = DummyDataGenerator()
             return (0..<count).map { index in
                 let isComplianceCheck = Double.random(in: 0...1) < 0.4

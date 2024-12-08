@@ -7,14 +7,18 @@
 
 import SwiftUI
 import Firebase
-import FirebaseAuth
-
+import StoreKit
 
 @main
 struct Powerful_ReportsApp: App {
     @StateObject private var viewModel = InspectionReportsViewModel()
     @StateObject private var authModel = AuthenticationViewModel()
     @State private var isActive = false
+
+    
+    @State private var subscriptionStatusModel = SubscriptionStatusModel()
+    @Environment(\.subscriptionIDs) private var subscriptionIDs
+    @State private var status: EntitlementTaskState<SubscriptionStatus> = .loading
     
     init() {
         FirebaseApp.configure()
@@ -23,35 +27,57 @@ struct Powerful_ReportsApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                if authModel.isInitializing {
-                    // Show a loading view or splash screen
-                    Color.color3.opacity(0.3)
-                        .ignoresSafeArea()
-                        .overlay(
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle())
-                        )
-                } else {
-                    if isActive {
-                        if authModel.isAuthenticated {
-                            HomeView()
-                                .environmentObject(viewModel)
-                                .environmentObject(authModel)
-                        } else {
-                            SignInWithApple()
-                                .environmentObject(authModel)
-                        }
+                if isActive {
+                    if authModel.user != nil {
+                        HomeView()
+                            .environmentObject(viewModel)
+                            .environmentObject(authModel)
+                            .environment(subscriptionStatusModel)
+                        
+                        
+                            .subscriptionStatusTask(for: subscriptionIDs.group) { taskStatus in
+                                self.status = await taskStatus.map { statuses in
+                                    await ProductSubscription.shared.status(
+                                        for: statuses,
+                                        ids: subscriptionIDs
+                                    )
+                                }
+                                switch self.status {
+                                case .failure(let error):
+                                    subscriptionStatusModel.subscriptionStatus = .notSubscribed
+                                    print("Failed to check subscription status: \(error)")
+                                case .success(let status):
+                                    subscriptionStatusModel.subscriptionStatus = status
+                                    print("Updated subscription status to: \(status)")
+                                case .loading: break
+                                @unknown default: break
+                                }
+                            }
+                            .task {
+                                ProductSubscription.createSharedInstance()
+                                await ProductSubscription.shared.checkForUnfinishedTransactions()
+                                await ProductSubscription.shared.observeTransactionUpdates()
+                            }
+                          
                     } else {
-                        SplashScreen(isActive: $isActive)
-                            .ignoresSafeArea()
+                        SignInWithApple()
+                            .environmentObject(authModel)
+                    }
+                } else {
+                    SplashScreen(isActive: $isActive)
+                        .ignoresSafeArea()
+                }
+            }
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    withAnimation {
+                        self.isActive = true
                     }
                 }
             }
         }
     }
 }
-
-
 
 extension UINavigationController: UIGestureRecognizerDelegate {
     override open func viewDidLoad() {
@@ -63,8 +89,6 @@ extension UINavigationController: UIGestureRecognizerDelegate {
         return viewControllers.count > 1
     }
 }
-
-
 
 struct SplashScreen: View {
     @State private var scale = 0.7

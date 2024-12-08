@@ -14,6 +14,9 @@ struct SettingsView: View {
     @EnvironmentObject var authModel: AuthenticationViewModel
     @ObservedObject var viewModel: InspectionReportsViewModel
     @Environment(\.dismiss) var dismiss
+    @Environment(SubscriptionStatusModel.self) private var subscriptionStatusModel
+    @Environment(\.subscriptionIDs) private var subscriptionIDs
+    
     @State private var showSignOutAlert = false
     @State private var showDeleteAccountAlert = false
     @State private var showDeleteConfirmation = false
@@ -21,7 +24,14 @@ struct SettingsView: View {
     @State private var showAlert = false
     @State private var alertTitle = ""
     @State private var alertMessage = ""
-
+    @State private var presentingSubscriptionSheet = false
+    
+    
+    
+    @State private var showScriptionView: Bool = false
+    @State private var status: EntitlementTaskState<SubscriptionStatus> = .loading
+ 
+    
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
@@ -29,12 +39,38 @@ struct SettingsView: View {
         return formatter
     }()
     
+    
+    
     var deleteAccountMessage: String {
         if let user = authModel.user,
            user.providerData.first(where: { $0.providerID == "apple.com" }) != nil {
             return "This will permanently delete your account and revoke the associated Apple ID credentials. This action CANNOT be undone. Are you absolutely sure?"
         }
         return "This will permanently delete your account and all associated data. This action CANNOT be undone. Are you absolutely sure?"
+    }
+    
+    private var subscriptionInfo: (title: String, detail: String, color: Color) {
+        switch subscriptionStatusModel.subscriptionStatus {
+        case .notSubscribed:
+            return ("Demo Mode", "Upgrade to access your reports", .secondary)
+        case .monthly(let expiryDate):
+            if let date = expiryDate {
+                return ("Premium Monthly", "Expires: \(formatDate(date))", .color2)
+            }
+            return ("Premium Monthly", "Active", .color2)
+        case .annual(let expiryDate):
+            if let date = expiryDate {
+                return ("Premium Annual", "Expires: \(formatDate(date))", .color2)
+            }
+            return ("Premium Annual", "Active", .color2)
+        }
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .long
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
     
     var body: some View {
@@ -80,24 +116,63 @@ struct SettingsView: View {
                             }
                         }
                         
+                        
+                        Section {
+                            planView
+                            // Show the option button if user does not have a plan.
+                            if subscriptionStatusModel.subscriptionStatus == .notSubscribed {
+                                Button {
+                                    self.viewModel.showPaywall = true
+                                } label: {
+                                    Text("View Options")
+                                }
+                            }
+                        } header: {
+                            Text("SUBSCRIPTION")
+                        } footer: {
+                            if subscriptionStatusModel.subscriptionStatus != .notSubscribed {
+                                Text("Powerful Reports+ Plan: \(String(describing: subscriptionStatusModel.subscriptionStatus.description))")
+                            }
+                        }
+                        
                         // Subscription Status
                         CustomCardView("Subscription") {
-                            Button {
-                                viewModel.showPaywall = true
-                            } label: {
+                            VStack(spacing: 8) {
                                 HStack {
                                     Image(systemName: "star.circle.fill")
-                                        .foregroundColor(.color2)
-                                    Text("Status")
+                                        .foregroundColor(subscriptionInfo.color)
+                                    Text(subscriptionInfo.title)
                                         .foregroundColor(.primary)
                                     Spacer()
-                                    Text(viewModel.isPremium ? "Premium" : "Demo")
-                                        .foregroundColor(viewModel.isPremium ? .color2 : .secondary)
-                                    Image(systemName: "chevron.right")
-                                        .foregroundColor(.gray.opacity(0.5))
                                 }
-                                .padding()
+                                
+                                if subscriptionStatusModel.subscriptionStatus != .notSubscribed {
+                                    HStack {
+                                        Text(subscriptionInfo.detail)
+                                            .font(.subheadline)
+                                            .foregroundColor(subscriptionInfo.color)
+                                        Spacer()
+                                    }
+                                    
+                                    Button("Manage Subscription \(Image(systemName: "chevron.right"))") {
+                                        self.presentingSubscriptionSheet = true
+                                    }
+                                    .foregroundColor(.color2)
+                                } else {
+                                    Button {
+                                        viewModel.showPaywall = true
+                                    } label: {
+                                        HStack {
+                                            Text("View Options")
+                                                .foregroundColor(.color2)
+                                            Spacer()
+                                            Image(systemName: "chevron.right")
+                                                .foregroundColor(.gray.opacity(0.5))
+                                        }
+                                    }
+                                }
                             }
+                            .padding()
                         }
                         
                         // Last Update Section
@@ -272,22 +347,12 @@ struct SettingsView: View {
                     }
             }
         }
-        .sheet(isPresented: $viewModel.showPaywall) {
-            SubscriptionStoreView(groupID: "21595486") {
-                VStack {
-                    Text("Powerful Reports")
-                        .font(.largeTitle)
-                        .fontWeight(.black)
-                    
-                    Text("Access comprehensive reporting and analysis with our premium subscription!")
-                        .multilineTextAlignment(.center)
-                }
-                .foregroundStyle(.white)
-                .containerBackground(.blue.gradient, for: .subscriptionStore)
-            }
-            .storeButton(.visible, for: .restorePurchases)
-            .subscriptionStoreControlStyle(.prominentPicker)
-        }
+
+            .sheet(isPresented:  $viewModel.showPaywall, content: {
+                Paywall()
+            })
+     
+
     }
     
     private func deleteAccount() {
@@ -323,4 +388,40 @@ struct SettingsView_Previews: PreviewProvider {
             SettingsView(viewModel: InspectionReportsViewModel())
         }
     }
+}
+
+
+
+extension SettingsView {
+    @ViewBuilder
+    var planView: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(subscriptionStatusModel.subscriptionStatus == .notSubscribed ? "Flower Movie+" : "Flower Movie+ Plan: \(subscriptionStatusModel.subscriptionStatus.description)")
+                .font(.system(size: 17))
+            
+            if case let .monthly(expiryDate) = subscriptionStatusModel.subscriptionStatus,
+               let date = expiryDate {
+                Text("Expires: \(formatDate(date))")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.blue)
+            } else if case let .annual(expiryDate) = subscriptionStatusModel.subscriptionStatus,
+                      let date = expiryDate {
+                Text("Expires: \(formatDate(date))")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.blue)
+            }
+            
+            Text(subscriptionStatusModel.subscriptionStatus == .notSubscribed ? "Subscription to unlock all streaming videos, enjoy Blu-ray 4K quality, and watch offline." : "Enjoy all streaming Blu-ray 4K quality videos, and watch offline.")
+                .font(.system(size: 15))
+                .foregroundStyle(.gray)
+            
+            if subscriptionStatusModel.subscriptionStatus != .notSubscribed {
+                Button("Handle Subscription \(Image(systemName: "chevron.forward"))") {
+                    self.presentingSubscriptionSheet = true
+                }
+            }
+        }
+    }
+    
+  
 }

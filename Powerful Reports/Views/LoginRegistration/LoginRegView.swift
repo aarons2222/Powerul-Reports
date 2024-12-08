@@ -11,6 +11,10 @@ import Firebase
 import FirebaseAuth
 import CryptoKit
 
+enum Field: Hashable {
+    case email, password, confirmPassword
+}
+
 struct LoginRegView: View {
     @EnvironmentObject var authModel: AuthenticationViewModel
     @State private var email = ""
@@ -25,14 +29,11 @@ struct LoginRegView: View {
     @State private var showPasswordReset = false
     @State private var resetMessage = ""
     @State private var resetSuccess = false
+    @State private var rememberMe = false
     @FocusState private var focusedField: Field?
     
     @State private var errorMessage: String = ""
   
-    private enum Field: Hashable {
-        case email, password, confirmPassword
-    }
-    
     private var passwordValidation: (isValid: Bool, message: String) {
         let password = password.trimmingCharacters(in: .whitespacesAndNewlines)
         
@@ -106,24 +107,20 @@ struct LoginRegView: View {
                             
                             // Password field
                             VStack(alignment: .leading, spacing: 4) {
-                                CustomTextField(
+                                CustomSecureField(
                                     text: $password,
                                     placeholder: "Password",
-                                    systemImage: "lock",
-                                    isSecure: !showPassword,
-                                    showSecureToggle: true,
-                                    onToggleSecure: { showPassword.toggle() }
-                                )
-                                .focused($focusedField, equals: .password)
-                                .submitLabel(isSignUp ? .next : .go)
-                                .onSubmit {
-                                    if isSignUp {
-                                        focusedField = .confirmPassword
-                                    } else {
-                                        handleLogin()
+                                    showPassword: $showPassword,
+                                    focusedField: _focusedField,
+                                    field: .password,
+                                    onSubmit: {
+                                        if isSignUp {
+                                            focusedField = .confirmPassword
+                                        } else {
+                                            handleSignIn()
+                                        }
                                     }
-                                }
-                                .disabled(isLoading)
+                                )
                                 
                                 if !password.isEmpty && !passwordValidation.isValid {
                                     Text(passwordValidation.message)
@@ -166,6 +163,13 @@ struct LoginRegView: View {
                                     .disabled(isLoading)
                                 }
                                 .padding(.top, -8)
+                                
+                                Toggle(isOn: $rememberMe) {
+                                    Text("Remember me")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(.horizontal)
                             }
                             
                             // Error message
@@ -185,7 +189,7 @@ struct LoginRegView: View {
                  
                             
                             // Sign In/Sign Up Button
-                            Button(action: isSignUp ? handleSignUp : handleLogin) {
+                            Button(action: isSignUp ? handleSignUp : handleSignIn) {
                                 HStack(spacing: 10) {
                                     if isLoading {
                                         ProgressView()
@@ -252,6 +256,19 @@ struct LoginRegView: View {
             withAnimation(.easeOut(duration: 0.8)) {
                 isAnimating = true
             }
+            
+            // Try to load saved credentials
+            if !isSignUp {
+                do {
+                    let credentials = try KeychainManager.shared.retrieveCredentials()
+                    email = credentials.email
+                    password = credentials.password
+                    rememberMe = true
+                } catch {
+                    // No saved credentials or error occurred
+                    print("No saved credentials found")
+                }
+            }
         }
         .onChange(of: authModel.isAuthenticated) { isAuthenticated in
             if isAuthenticated {
@@ -301,10 +318,35 @@ struct LoginRegView: View {
         return !emailTrimmed.isEmpty && passwordValidation.isValid
     }
     
-    private func handleLogin() {
+    private func handleSignIn() {
         isLoading = true
-        errorMessage = "" // Clear any previous error
-        authModel.signIn(email: email, password: password)
+        errorMessage = ""
+        
+        Task {
+            do {
+                // First try to sign in
+                try await authModel.signIn(email: email, password: password)
+                
+                // If sign in is successful and remember me is enabled, save credentials
+                if rememberMe {
+                    do {
+                        try KeychainManager.shared.saveCredentials(email: email, password: password)
+                    } catch {
+                        print("Failed to save credentials: \(error)")
+                    }
+                } else {
+                    // If remember me is not enabled, ensure no credentials are saved
+                    try? KeychainManager.shared.deleteCredentials()
+                }
+                
+                isLoading = false
+            } catch {
+                // If sign in fails, clear any saved credentials
+                try? KeychainManager.shared.deleteCredentials()
+                isLoading = false
+                errorMessage = error.localizedDescription
+            }
+        }
     }
     
     private func handleSignUp() {
@@ -353,6 +395,19 @@ struct LoginRegView: View {
             }
         }
     }
+    
+    private func handleSignOut() {
+        Task {
+            do {
+                try await authModel.signOut()
+                // Always clear saved credentials when signing out
+                try? KeychainManager.shared.deleteCredentials()
+                rememberMe = false
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
 }
 
 struct CustomTextField: View {
@@ -391,6 +446,48 @@ struct CustomTextField: View {
                 .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
         )
         .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+    }
+}
+
+struct CustomSecureField: View {
+    let text: Binding<String>
+    let placeholder: String
+    @Binding var showPassword: Bool
+    @FocusState var focusedField: Field?
+    let field: Field
+    let onSubmit: () -> Void
+    
+    var body: some View {
+        HStack {
+            Image(systemName: "lock")
+                .foregroundColor(.secondary)
+            
+            ZStack(alignment: .trailing) {
+                if showPassword {
+                    TextField(placeholder, text: text)
+                        .submitLabel(.next)
+                        .onSubmit(onSubmit)
+                } else {
+                    SecureField(placeholder, text: text)
+                        .submitLabel(.next)
+                        .onSubmit(onSubmit)
+                }
+                
+                Button(action: { showPassword.toggle() }) {
+                    Image(systemName: showPassword ? "eye.fill" : "eye.slash.fill")
+                        .foregroundColor(.secondary)
+                }
+                .padding(.trailing, 8)
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.white)
+                .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+        )
+        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+        .focused($focusedField, equals: field)
     }
 }
 
