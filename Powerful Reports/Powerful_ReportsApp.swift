@@ -27,7 +27,11 @@ struct Powerful_ReportsApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                if isActive {
+                if authModel.isInitializing {
+                    // Show loading state while auth is initializing
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle())
+                } else if isActive {
                     if authModel.user != nil {
                         HomeView()
                             .environmentObject(viewModel)
