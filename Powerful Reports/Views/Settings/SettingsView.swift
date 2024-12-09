@@ -28,7 +28,7 @@ struct SettingsView: View {
     
     
     
-    @State private var showScriptionView: Bool = false
+    @State private var showPaywall: Bool = false
     @State private var status: EntitlementTaskState<SubscriptionStatus> = .loading
  
     
@@ -117,63 +117,22 @@ struct SettingsView: View {
                         }
                         
                         
-                        Section {
+                        CustomCardView("Subscription") {
                             planView
-                            // Show the option button if user does not have a plan.
+
                             if subscriptionStatusModel.subscriptionStatus == .notSubscribed {
                                 Button {
-                                    self.viewModel.showPaywall = true
+                                    self.showPaywall = true
                                 } label: {
-                                    Text("View Options")
+                                    HStack{
+                                        Spacer()
+                                        Text("View Subscriptions")
+                                    }
                                 }
-                            }
-                        } header: {
-                            Text("SUBSCRIPTION")
-                        } footer: {
-                            if subscriptionStatusModel.subscriptionStatus != .notSubscribed {
-                                Text("Powerful Reports+ Plan: \(String(describing: subscriptionStatusModel.subscriptionStatus.description))")
                             }
                         }
                         
-                        // Subscription Status
-                        CustomCardView("Subscription") {
-                            VStack(spacing: 8) {
-                                HStack {
-                                    Image(systemName: "star.circle.fill")
-                                        .foregroundColor(subscriptionInfo.color)
-                                    Text(subscriptionInfo.title)
-                                        .foregroundColor(.primary)
-                                    Spacer()
-                                }
-                                
-                                if subscriptionStatusModel.subscriptionStatus != .notSubscribed {
-                                    HStack {
-                                        Text(subscriptionInfo.detail)
-                                            .font(.subheadline)
-                                            .foregroundColor(subscriptionInfo.color)
-                                        Spacer()
-                                    }
-                                    
-                                    Button("Manage Subscription \(Image(systemName: "chevron.right"))") {
-                                        self.presentingSubscriptionSheet = true
-                                    }
-                                    .foregroundColor(.color2)
-                                } else {
-                                    Button {
-                                        viewModel.showPaywall = true
-                                    } label: {
-                                        HStack {
-                                            Text("View Options")
-                                                .foregroundColor(.color2)
-                                            Spacer()
-                                            Image(systemName: "chevron.right")
-                                                .foregroundColor(.gray.opacity(0.5))
-                                        }
-                                    }
-                                }
-                            }
-                            .padding()
-                        }
+                  
                         
                         // Last Update Section
                         CustomCardView("Last Update") {
@@ -348,7 +307,7 @@ struct SettingsView: View {
             }
         }
 
-            .sheet(isPresented:  $viewModel.showPaywall, content: {
+            .sheet(isPresented: $showPaywall, content: {
                 Paywall()
             })
      
@@ -396,24 +355,32 @@ extension SettingsView {
     @ViewBuilder
     var planView: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(subscriptionStatusModel.subscriptionStatus == .notSubscribed ? "Flower Movie+" : "Flower Movie+ Plan: \(subscriptionStatusModel.subscriptionStatus.description)")
-                .font(.system(size: 17))
+ 
             
+       
             if case let .monthly(expiryDate) = subscriptionStatusModel.subscriptionStatus,
                let date = expiryDate {
+                Text("Powerful Reports Monthly")
+                    .font(.system(size: 17))
+                
                 Text("Expires: \(formatDate(date))")
                     .font(.system(size: 15))
                     .foregroundStyle(.blue)
             } else if case let .annual(expiryDate) = subscriptionStatusModel.subscriptionStatus,
                       let date = expiryDate {
+                
+                Text("Powerful Reports Annual")
+                    .font(.system(size: 17))
                 Text("Expires: \(formatDate(date))")
                     .font(.system(size: 15))
                     .foregroundStyle(.blue)
+            }else{
+                Text("Not Subscribed")
+                    .font(.system(size: 17))
             }
             
-            Text(subscriptionStatusModel.subscriptionStatus == .notSubscribed ? "Subscription to unlock all streaming videos, enjoy Blu-ray 4K quality, and watch offline." : "Enjoy all streaming Blu-ray 4K quality videos, and watch offline.")
-                .font(.system(size: 15))
-                .foregroundStyle(.gray)
+
+            
             
             if subscriptionStatusModel.subscriptionStatus != .notSubscribed {
                 Button("Handle Subscription \(Image(systemName: "chevron.forward"))") {

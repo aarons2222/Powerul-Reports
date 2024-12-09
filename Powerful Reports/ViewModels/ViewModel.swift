@@ -14,7 +14,7 @@ class InspectionReportsViewModel: ObservableObject {
     @Published var lastFirebaseUpdate: Date?
     @Published var isLoading: Bool = false
     @Published var showPaywall: Bool = false
-    @Published var isPremium: Bool = false // Add this to track subscription status
+    @Published var isPremium: Bool = true
 
     // Filter states
     @Published var selectedInspector: String?
@@ -25,7 +25,7 @@ class InspectionReportsViewModel: ObservableObject {
     @Published var selectedDateRange: ClosedRange<Date>?
     
     // Time Filter
-    private var currentTimeFilter: TimeFilter = .last3Months
+    private var currentTimeFilter: TimeFilter = .last12Months
     
     // Caching structures
      var groupedReports: [String: [Report]] = [:]
@@ -46,9 +46,7 @@ class InspectionReportsViewModel: ObservableObject {
     // Search
     private var searchCancellable: AnyCancellable?
     
-    // Trial Mode
-    private let isTrial = false
-    
+ 
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy"
@@ -125,7 +123,7 @@ class InspectionReportsViewModel: ObservableObject {
     }
     
     init() {
-        if isTrial {
+        if !isPremium {
             self.reports = DummyDataGenerator.generateDummyReports(count: 500)
             self.filteredReports = self.reports
             self.reportsCount = self.reports.count
@@ -233,7 +231,7 @@ class InspectionReportsViewModel: ObservableObject {
     // MARK: - Firebase Integration
     
     func fetchReports() {
-        if isTrial { return }
+        if !isPremium { return }
         
         print("Fetching Reports")
         isLoading = true

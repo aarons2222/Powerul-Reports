@@ -25,7 +25,7 @@ struct HomeView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(SubscriptionStatusModel.self) private var subscriptionStatusModel
     @State var showSettings = false
-    @AppStorage("selectedTimeFilter") private var selectedTimeFilter: TimeFilter = .last3Months
+    @AppStorage("selectedTimeFilter") private var selectedTimeFilter: TimeFilter = .last12Months
     @State private var path = [NavigationPath]()
     @State private var isInitialized = false
     
