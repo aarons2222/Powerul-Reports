@@ -24,10 +24,10 @@ struct CustomCardView<Content: View>: View {
     var body: some View {
         
         
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text(title)
-                    .font(.title3)
+                    .font(.headline)
                     .fontWeight(.regular)
                     .foregroundColor(.color4)
                 Spacer()
@@ -36,11 +36,14 @@ struct CustomCardView<Content: View>: View {
                     nav
                 }
             }
-            .padding(.bottom, 20)
+            .padding(.bottom, 15)
             
             content
         }
         .padding()
         .cardBackground()
     }
+}
+
+#Preview {
 }

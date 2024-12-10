@@ -14,7 +14,23 @@ class InspectionReportsViewModel: ObservableObject {
     @Published var lastFirebaseUpdate: Date?
     @Published var isLoading: Bool = false
     @Published var showPaywall: Bool = false
-    @Published var isPremium: Bool = true
+    @Published var isPremium: Bool = false {
+        didSet {
+            if isPremium {
+                loadCachedReports()
+                fetchReports()
+            } else {
+                self.reports = DummyDataGenerator.generateDummyReports(count: 500)
+                self.filteredReports = self.reports
+                self.reportsCount = self.reports.count
+                Task { @MainActor in
+                    await buildCaches()
+                    await updateProvisionTypeDistribution()
+                }
+            }
+        }
+    }
+
 
     // Filter states
     @Published var selectedInspector: String?
@@ -123,18 +139,14 @@ class InspectionReportsViewModel: ObservableObject {
     }
     
     init() {
-        if !isPremium {
-            self.reports = DummyDataGenerator.generateDummyReports(count: 500)
-            self.filteredReports = self.reports
-            self.reportsCount = self.reports.count
-            
-            Task { @MainActor in
-                await buildCaches()
-                await updateProvisionTypeDistribution()
-            }
-        } else {
-            loadCachedReports()
-            fetchReports()
+        // Initial setup with dummy data
+        self.reports = DummyDataGenerator.generateDummyReports(count: 500)
+        self.filteredReports = self.reports
+        self.reportsCount = self.reports.count
+        
+        Task { @MainActor in
+            await buildCaches()
+            await updateProvisionTypeDistribution()
         }
         
         // Setup search functionality

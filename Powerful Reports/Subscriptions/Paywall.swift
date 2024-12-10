@@ -12,6 +12,9 @@ struct Paywall: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.subscriptionIDs.group) private var subscriptionGroupID
 
+    let privacy: URL = URL("https://www.powerfulpractitioners.co.uk/privacy-policy")
+    let terms: URL = URL("https://www.powerfulpractitioners.co.uk/terms-of-use")
+      
     
     var body: some View {
         SubscriptionStoreView(groupID: subscriptionGroupID) {
@@ -21,18 +24,13 @@ struct Paywall: View {
             }
             .padding(.top, 30)
         }
-        .subscriptionStorePickerItemBackground(
-            AnyShapeStyle(
-                LinearGradient(
-                    colors: [
-                        colorScheme == .dark ? .color2.opacity(0.3) : .white,
-                        colorScheme == .dark ? .color3.opacity(0.3) : .white.opacity(0.9)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-        )
+        .storeButton(.visible, for: .redeemCode)
+        .storeButton(.visible, for: .restorePurchases)
+        .subscriptionStorePolicyDestination(url: privacy, for: .privacyPolicy)
+        .subscriptionStorePolicyDestination(url: terms, for: .termsOfService)
+        .backgroundStyle(.clear)
+        .subscriptionStorePickerItemBackground(.thinMaterial)
+        .subscriptionStoreControlStyle(.automatic)
         .background {
             ZStack {
                 LinearGradient(
@@ -115,3 +113,9 @@ struct FeatureRow: View {
 }
 
 
+// force unwrap URL
+extension URL {
+    init(_ string: StaticString) {
+        self.init(string: "\(string)")!
+    }
+}

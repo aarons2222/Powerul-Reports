@@ -27,17 +27,13 @@ enum SubscriptionStatus: Comparable, Hashable {
         case .notSubscribed:
             "Not Subscribed"
         case .monthly(let expiryDate):
-            if let date = expiryDate {
-                "Monthly (Expires: \(Self.formatDate(date)))"
-            } else {
+         
                 "Monthly"
-            }
+            
         case .annual(let expiryDate):
-            if let date = expiryDate {
-                "Annual (Expires: \(Self.formatDate(date)))"
-            } else {
+          
                 "Annual"
-            }
+            
         }
     }
     

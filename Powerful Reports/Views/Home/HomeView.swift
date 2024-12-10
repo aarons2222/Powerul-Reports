@@ -14,7 +14,7 @@ struct HomeView: View {
     
     @State private var showScriptionView: Bool = false
     @State private var status: EntitlementTaskState<SubscriptionStatus> = .loading
-    @State private var presentingSubscriptionSheet = false
+    @State private var showPaywall = false
     
     @Environment(\.subscriptionIDs) private var subscriptionIDs
     
@@ -41,17 +41,11 @@ struct HomeView: View {
     
     
     private var provisionTypeDistribution: [OutcomeData] {
-//        // Add a debug print to see what's coming in
-//        print("Filtered reports_count: \(viewModel.filteredReports.count)")
-//        print("All reports_count: \(viewModel.reports.count)")
-//        print("Unique types: \(Set(viewModel.filteredReports.map { $0.typeOfProvision }))")
-        
+
         let types = viewModel.filteredReports.map { $0.typeOfProvision }
         let counts = Dictionary(grouping: types) { $0 }
             .mapValues { $0.count }
-        
-        // Add a debug print to see the counts
-            //  print("Counts dictionary: \(counts)")
+
         
         return counts.map { type, count in
             let displayType = type.isEmpty ? "Not Specified" : type
@@ -168,30 +162,52 @@ struct HomeView: View {
            
                     
                     if subscriptionStatusModel.subscriptionStatus == .notSubscribed {
-                        CustomCardView("Demo Mode") {
+                        VStack(spacing: 0) {
+                      
+                            
                             Button {
-                                viewModel.showPaywall = true
+                                self.showPaywall = true
                             } label: {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "info.circle.fill")
-                                        .foregroundColor(.color2)
-                                    
-                             
+                                HStack(alignment: .center, spacing: 16) {
+                                    // Left side with icon and text
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "sparkles")
+                                            .font(.title)
+                                            .foregroundColor(.color2)
+                                            .symbolEffect(.bounce.up.byLayer, options: .repeating)
+                                            .symbolEffect(.pulse.byLayer, options: .repeating)
                                         
-                                        Text("You're viewing demo data. Upgrade to access your reports.")
-                                            .font(.subheadline)
-                                            .foregroundColor(.secondary)
-                                    
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("Unlock Full Access")
+                                                .font(.headline)
+                                                .fontWeight(.regular)
+                                                .foregroundColor(.primary)
+                                            
+                                            Text("You're viewing demo data")
+                                                .font(.body)
+                                                .fontWeight(.regular)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
                                     
                                     Spacer()
                                     
+                               
                                     Text("Upgrade")
-                                        .foregroundColor(.color2)
-                                        .font(.subheadline.bold())
+                                        .font(.headline)
+                                        .fontWeight(.regular)
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 8)
+                                        .background(Color.color1)
+                                        .clipShape(Capsule())
                                 }
                                 .padding()
+                                .contentShape(Rectangle())
                             }
+                            .buttonStyle(ScaleButtonStyle())
                         }
+                        .cardBackground()
                         .padding(.horizontal)
                     }
                     
@@ -277,11 +293,6 @@ struct HomeView: View {
                         
                         
                         
-                       
-                                       
-                        
-                        
-                        
                                         Button {
                                             path.append(.provisionInformation)
                                         } label: {
@@ -342,6 +353,10 @@ struct HomeView: View {
             SettingsView(viewModel: viewModel)
                 .environment(subscriptionStatusModel)
         }
+        .sheet(isPresented: $showPaywall) {
+            Paywall()
+                .environment(subscriptionStatusModel)
+        }
    
             
             
@@ -399,10 +414,34 @@ struct HomeView: View {
 
      
     }
+        
+        .onChange(of: subscriptionStatusModel.subscriptionStatus){
+            Task{
+                if subscriptionStatusModel.subscriptionStatus == .notSubscribed {
+                    viewModel.isPremium = false
+                    print("here0")
+                }else{
+                    viewModel.isPremium = true
+                    print("here1")
+                }
+            }
+        }
         .task {
             guard !isInitialized else { return }
             isInitialized = true
             await viewModel.filterReports(timeFilter: selectedTimeFilter)
+            
+            if subscriptionStatusModel.subscriptionStatus == .notSubscribed {
+                viewModel.isPremium = false
+                print("here2")
+            }else{
+                print("here3")
+                viewModel.isPremium = true
+            }
+            
+     
+
+
         }
       
         
@@ -486,10 +525,13 @@ struct HomeView: View {
         .padding(.horizontal, 15)
     }
     
-    
-    
-    
-    
+    struct ScaleButtonStyle: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .scaleEffect(configuration.isPressed ? 0.97 : 1)
+                .animation(.easeInOut(duration: 0.2), value: configuration.isPressed)
+        }
+    }
     
     private func getInspectorProfile(name: String) -> InspectorProfile {
         let inspectorReports = viewModel.reports.filter { $0.inspector == name }

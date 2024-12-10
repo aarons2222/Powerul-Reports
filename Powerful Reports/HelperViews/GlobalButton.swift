@@ -10,11 +10,11 @@ import SwiftUI
 struct GlobalButton: View {
     // Properties
     var title: String
-    var action: () -> Void
     var backgroundColor: Color = .color1
     var foregroundColor: Color = .white
     var verticalPadding: CGFloat = 14
     var horizontalPadding: CGFloat = 0
+    var action: () -> Void
     
 
     // Body
