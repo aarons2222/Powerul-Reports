@@ -11,6 +11,8 @@ import StoreKit
 struct Paywall: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.subscriptionIDs.group) private var subscriptionGroupID
+    @Environment(\.dismiss) private var dismiss
+    @State private var showThankYouToast = false
 
     let privacy: URL = URL("https://www.powerfulpractitioners.co.uk/privacy-policy")
     let terms: URL = URL("https://www.powerfulpractitioners.co.uk/terms-of-use")
@@ -31,6 +33,29 @@ struct Paywall: View {
         .backgroundStyle(.clear)
         .subscriptionStorePickerItemBackground(.thinMaterial)
         .subscriptionStoreControlStyle(.automatic)
+        .onInAppPurchaseCompletion { product, result in
+            if case .success(_) = result {
+                showThankYouToast = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    dismiss()
+                }
+            }
+        }
+        .overlay {
+            if showThankYouToast {
+                VStack {
+                    Spacer()
+                    Text("Thank you for subscribing! 🎉")
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.accentColor)
+                        .cornerRadius(10)
+                        .padding(.bottom, 32)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+                .animation(.spring(), value: showThankYouToast)
+            }
+        }
         .background {
             ZStack {
                 LinearGradient(
