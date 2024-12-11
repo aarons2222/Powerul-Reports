@@ -28,18 +28,30 @@ struct ThemeRankingCard: View {
             .padding(.bottom, 20)
             
             
-            
-            ForEach(Array(themes.enumerated()), id: \.1.0) { index, theme in
-                HStack {
-                    Text("\(index + 1)")
-                        .foregroundStyle(.gray)
-                        .padding(.trailing, 8)
-                    
-                    Text(theme.0)
-                        .foregroundStyle(.color4)
-                }
+            ScrollView{
+                
+                ForEach(Array(themes.enumerated()), id: \.1.0) { index, theme in
               
-                .font(.body)
+                    HStack(alignment: .center) {
+                        Text(theme.0)
+                            .font(.body)
+                            .foregroundStyle(.color4)
+                        
+                        Spacer()
+                        
+                        Text("\(theme.1)")
+                            .font(.body)
+                            .foregroundColor(.gray)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                        
+                    }
+                    
+                    if index < themes.count - 1 {
+                        Divider()
+                    }
+                    
+                }
             }
         }
         .padding()

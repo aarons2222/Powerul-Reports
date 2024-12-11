@@ -70,21 +70,39 @@ struct HomeView: View {
     
     
     
+//    
+//    private func getTheThemes(amount: Int?) -> [(String, Int)] {
+//        let allThemes = viewModel.filteredReports.flatMap { $0.themes }
+//        var themeCounts: [String: Int] = [:]
+//        
+//        allThemes.forEach { theme in
+//            themeCounts[theme.topic, default: 0] += theme.frequency
+//        }
+//        
+//        let sorted = themeCounts.sorted { $0.value > $1.value }
+//        return amount == nil ? sorted : sorted.prefix(amount!).map { ($0.key, $0.value) }
+//    }
+
     
-    private func getTheThemes(amount: Int?) -> [(String, Int)] {
+    func getTheThemes() -> [(String, Int)] {
         let allThemes = viewModel.filteredReports.flatMap { $0.themes }
         var themeCounts: [String: Int] = [:]
         
+        // Count each appearance of a theme
         allThemes.forEach { theme in
-            themeCounts[theme.topic, default: 0] += theme.frequency
+            themeCounts[theme.topic, default: 0] += 1
         }
         
+        // Sort by frequency (highest to lowest) and convert to array of tuples
         let sorted = themeCounts.sorted { $0.value > $1.value }
-        return amount == nil ? sorted : sorted.prefix(amount!).map { ($0.key, $0.value) }
+            .map { ($0.key, $0.value) }
+        
+        return sorted
     }
 
-    
-    
+    func getTopThemeFrequencies() -> [(String, Int)] {
+        return getTheThemes().prefix(5).map { ($0.0, $0.1) }
+    }
     
     var body: some View {
         
@@ -258,7 +276,7 @@ struct HomeView: View {
                                        Button {
                                            path.append(.themes)
                                        } label: {
-                                           ThemeRankingCard(themes: getTheThemes(amount: 5))
+                                           ThemeRankingCard(themes: getTopThemeFrequencies())
                                                .padding(.bottom)
                                        }
                                        .buttonStyle(PlainButtonStyle())

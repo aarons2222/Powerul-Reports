@@ -492,7 +492,7 @@ struct MarqueeModifier: ViewModifier {
                 .fixedSize(horizontal: true, vertical: false)
                 .offset(x: animate ? -geometry.size.width : 0)
                 .animation(
-                    .linear(duration: 12)
+                    .linear(duration: 10)
                     .repeatForever(autoreverses: false),
                     value: animate
                 )
