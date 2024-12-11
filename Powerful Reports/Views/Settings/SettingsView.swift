@@ -30,7 +30,7 @@ struct SettingsView: View {
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
-        formatter.timeStyle = .none
+        formatter.timeStyle = .short
         return formatter
     }()
     
@@ -70,12 +70,12 @@ struct SettingsView: View {
             return ("Demo Mode", "Upgrade to access your reports", .secondary)
         case .monthly(let expiryDate):
             if let date = expiryDate {
-                return ("Premium Monthly", "Expires: \(formatDate(date))", .color2)
+                return ("Premium Monthly", "Expires: \(date)", .color2)
             }
             return ("Premium Monthly", "Active", .color2)
         case .annual(let expiryDate):
             if let date = expiryDate {
-                return ("Premium Annual", "Expires: \(formatDate(date))", .color2)
+                return ("Premium Annual", "Expires: \(date)", .color2)
             }
             return ("Premium Annual", "Active", .color2)
         }
@@ -159,7 +159,7 @@ struct SettingsView: View {
                                 switch subscriptionStatusModel.subscriptionStatus {
                                 case .monthly(let date), .annual(let date):
                                     if let date {
-                                        return "Expires: " + dateFormatter.string(from: date)
+                                        return dateFormatter.string(from: date)
                                     }
                                     return "Active"
                                 case .notSubscribed:
@@ -174,7 +174,8 @@ struct SettingsView: View {
                                     icon: "storefront",
                                     iconColor: .color2,
                                     title: "Active Plan",
-                                    subtitle: expiryDate)
+                                    subtitle: expiryDate,
+                                    marquee: true)
                             }
                         }
                         
@@ -190,7 +191,8 @@ struct SettingsView: View {
                                 icon: "person",
                                 iconColor: .color2,
                                 title: "Manage Account",
-                                subtitle: "Your Controls")
+                                subtitle: "Your Controls",
+                                marquee: false)
                                
                         }
                 
@@ -207,7 +209,8 @@ struct SettingsView: View {
                                 icon: "globe",
                                 iconColor: .color2,
                                 title: "Visit Our Website",
-                                subtitle: "Discover More")
+                                subtitle: "Discover More",
+                                marquee: false)
                         }
                         
                         
@@ -223,7 +226,8 @@ struct SettingsView: View {
                                 icon: "person.3.sequence",
                                 iconColor: .color2,
                                 title: "Share Our App",
-                                subtitle: "Empower Others")
+                                subtitle: "Empower Others",
+                                marquee: false)
                         }
                      
                         
@@ -244,7 +248,8 @@ struct SettingsView: View {
                                 icon: "lock.shield",
                                 iconColor: .color2,
                                 title: "Privacy Policy",
-                                subtitle: "Our Promise")
+                                subtitle: "Our Promise",
+                                marquee: false)
                         }
                         
                         NavigationLink {
@@ -254,7 +259,8 @@ struct SettingsView: View {
                                 icon: "doc.text",
                                 iconColor: .color2,
                                 title: "Terms of Service",
-                                subtitle: "The Rules")
+                                subtitle: "The Rules",
+                                marquee: false)
                         }
                         
                         // Support Section
@@ -267,7 +273,8 @@ struct SettingsView: View {
                                 icon: "envelope",
                                 iconColor: .color2,
                                 title: "Contact Support",
-                                subtitle: "We're Here")
+                                subtitle: "We're Here",
+                                marquee: false)
                         }
                         .gridCellColumns(2)
                   
@@ -400,6 +407,7 @@ struct InfoCardView: View {
     let iconColor: Color
     let title: String
     let subtitle: String?
+    let marquee: Bool
     
   
     
@@ -407,12 +415,16 @@ struct InfoCardView: View {
         icon: String = "info.circle",
         iconColor: Color = .color2,
         title: String = "title",
-        subtitle: String? = nil
+        subtitle: String? = nil,
+        marquee: Bool = false
+
     ) {
         self.icon = icon
         self.iconColor = iconColor
         self.title = title
         self.subtitle = subtitle
+        self.marquee = marquee
+
     }
     
     var body: some View {
@@ -430,10 +442,22 @@ struct InfoCardView: View {
                     .font(.subheadline)
                 
                 if let subtitle {
-                    Text(subtitle)
-                        .foregroundColor(.secondary)
-                        .font(.footnote)
-                }
+                                    if marquee {
+                                        HStack(spacing: 0){
+                                            Text("Expires:  ")
+                                            
+                                            Text(subtitle)
+                                                .marquee()
+                                        }
+                                        .foregroundColor(.secondary)
+                                        .font(.footnote)
+                                       
+                                    } else {
+                                        Text(subtitle)
+                                            .foregroundColor(.secondary)
+                                            .font(.footnote)
+                                    }
+                                }
             }
             .padding(.bottom, 12)
             
@@ -445,3 +469,38 @@ struct InfoCardView: View {
         .cardBackground()
     }
 }
+
+
+import SwiftUI
+
+extension View {
+    func marquee() -> some View {
+        modifier(MarqueeModifier())
+    }
+}
+
+struct MarqueeModifier: ViewModifier {
+    @State private var animate = false
+    
+    func body(content: Content) -> some View {
+        GeometryReader { geometry in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 30) {
+                    content
+                    content
+                }
+                .fixedSize(horizontal: true, vertical: false)
+                .offset(x: animate ? -geometry.size.width : 0)
+                .animation(
+                    .linear(duration: 12)
+                    .repeatForever(autoreverses: false),
+                    value: animate
+                )
+                .onAppear {
+                    animate = true
+                }
+            }
+        }
+    }
+}
+
