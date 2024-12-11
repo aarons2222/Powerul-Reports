@@ -145,10 +145,13 @@ struct AnnualStatsView: View {
     }
     
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
             CustomHeaderVIew(title: "Annual Statistics")
             
             ScrollView {
+                
+                Color.clear
+                    .frame(height: 20)
                 VStack(spacing: 20) {
                     // Monthly Inspection Count
                     CustomCardView("Monthly Inspection Count") {

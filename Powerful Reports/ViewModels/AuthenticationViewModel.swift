@@ -289,15 +289,17 @@ class AuthenticationViewModel: ObservableObject {
                 self.errorMessage = "This email is already registered."
             case .weakPassword:
                 self.errorMessage = "Password is too weak. Please use at least 8 characters."
-            case .userNotFound:
-                self.errorMessage = "No account found with this email."
-            case .networkError:
-                self.errorMessage = "Network error. Please check your connection."
             default:
-                self.errorMessage = error.localizedDescription
+                // Check for the specific "malformed or expired" error
+                if err.localizedDescription.contains("malformed or expired") {
+                    self.errorMessage = "This email was previously used with Sign in with Apple. Please use the 'Sign in with Apple' button instead."
+                } else {
+                    self.errorMessage = err.localizedDescription
+                }
             }
         } else {
-            self.errorMessage = error.localizedDescription
+            self.errorMessage = err.localizedDescription
         }
+        isLoading = false
     }
 }
