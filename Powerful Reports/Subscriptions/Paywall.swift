@@ -48,14 +48,18 @@ struct Paywall: View {
         .overlay {
             if showThankYouToast {
                 VStack {
-                    Spacer()
+                    
                     Text("Thank you for subscribing! 🎉")
                         .foregroundColor(.white)
                         .padding()
-                        .background(Color.accentColor)
-                        .cornerRadius(10)
+                        .background(
+                            Capsule()
+                                .fill(.color1)
+                        )
                         .padding(.bottom, 32)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
+                    
+                    Spacer()
                 }
                 .animation(.spring(), value: showThankYouToast)
             }

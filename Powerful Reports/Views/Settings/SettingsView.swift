@@ -151,17 +151,30 @@ struct SettingsView: View {
                                 InfoCardView(
                                     icon: "storefront",
                                     iconColor: .color2,
-                                    title: "Not Subscribed", subtitle: "View Plans")
+                                    title: "Not Subscribed",
+                                    subtitle: "View Plans")
                             }
-                        }else{
+                        } else {
+                            let expiryDate: String = {
+                                switch subscriptionStatusModel.subscriptionStatus {
+                                case .monthly(let date), .annual(let date):
+                                    if let date {
+                                        return "Expires: " + dateFormatter.string(from: date)
+                                    }
+                                    return "Active"
+                                case .notSubscribed:
+                                    return "Not Active"
+                                }
+                            }()
+                            
                             Button {
                                 self.presentingSubscriptionSheet = true
                             } label: {
                                 InfoCardView(
                                     icon: "storefront",
                                     iconColor: .color2,
-                                    title: "Active Plan", subtitle: "Expires: 25 Dec 2024")
-                                
+                                    title: "Active Plan",
+                                    subtitle: expiryDate)
                             }
                         }
                         

@@ -27,13 +27,63 @@ enum SubscriptionStatus: Comparable, Hashable {
         case .notSubscribed:
             "Not Subscribed"
         case .monthly(let expiryDate):
-         
+            if let expiryDate {
+                "Monthly (Expires \(Self.formatDate(expiryDate)))"
+            } else {
                 "Monthly"
-            
+            }
         case .annual(let expiryDate):
-          
+            if let expiryDate {
+                "Annual (Expires \(Self.formatDate(expiryDate)))"
+            } else {
                 "Annual"
-            
+            }
+        }
+    }
+    
+    var rawValue: String {
+        switch self {
+        case .notSubscribed:
+            return "notSubscribed"
+        case .monthly(let expiryDate):
+            if let expiryDate {
+                return "monthly_\(expiryDate.timeIntervalSince1970)"
+            }
+            return "monthly"
+        case .annual(let expiryDate):
+            if let expiryDate {
+                return "annual_\(expiryDate.timeIntervalSince1970)"
+            }
+            return "annual"
+        }
+    }
+    
+    init?(rawValue: String) {
+        if rawValue == "notSubscribed" {
+            self = .notSubscribed
+            return
+        }
+        
+        let components = rawValue.split(separator: "_")
+        if components.count == 2, let timestamp = Double(components[1]) {
+            let expiryDate = Date(timeIntervalSince1970: timestamp)
+            switch components[0] {
+            case "monthly":
+                self = .monthly(expiryDate: expiryDate)
+            case "annual":
+                self = .annual(expiryDate: expiryDate)
+            default:
+                return nil
+            }
+        } else {
+            switch rawValue {
+            case "monthly":
+                self = .monthly(expiryDate: nil)
+            case "annual":
+                self = .annual(expiryDate: nil)
+            default:
+                return nil
+            }
         }
     }
     
