@@ -30,9 +30,13 @@ struct Paywall: View {
         .storeButton(.visible, for: .restorePurchases)
         .subscriptionStorePolicyDestination(url: privacy, for: .privacyPolicy)
         .subscriptionStorePolicyDestination(url: terms, for: .termsOfService)
+        
         .backgroundStyle(.clear)
         .subscriptionStorePickerItemBackground(.thinMaterial)
         .subscriptionStoreControlStyle(.automatic)
+        .storeButton(.visible)
+        .buttonBorderShape(.capsule)
+        .tint(.color1)
         .onInAppPurchaseCompletion { product, result in
             if case .success(_) = result {
                 showThankYouToast = true
@@ -106,7 +110,7 @@ struct Paywall: View {
     private var featuresView: some View {
         VStack(alignment: .leading, spacing: 16) {
             FeatureRow(icon: "chart.xyaxis.line", title: "Trend Analysis", description: "Track inspection outcomes and ratings over 12 months")
-            FeatureRow(icon: "magnifyingglass.circle", title: "Deep Insights", description: "Compare performance across regions and instpectpors")
+            FeatureRow(icon: "magnifyingglass.circle", title: "Deep Insights", description: "Compare performance across regions and inspectors")
             FeatureRow(icon: "doc.text.magnifyingglass", title: "Historical Data", description: "12-month historical analysis and benchmarking")
         }
         .padding(.horizontal)
