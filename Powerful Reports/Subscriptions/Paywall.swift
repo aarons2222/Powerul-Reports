@@ -49,14 +49,14 @@ struct Paywall: View {
             if showThankYouToast {
                 VStack {
                     
-                    Text("Thank you for subscribing! 🎉")
+                    Text("Thank you for subscribing!")
                         .foregroundColor(.white)
                         .padding()
                         .background(
                             Capsule()
                                 .fill(.color1)
                         )
-                        .padding(.bottom, 32)
+                        .padding(.vertical, 32)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                     
                     Spacer()

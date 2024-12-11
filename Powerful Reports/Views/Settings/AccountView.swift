@@ -57,6 +57,7 @@ struct AccountView: View {
             }
             .padding(.horizontal)
         }
+        .padding(.bottom, 30)
         
         .ignoresSafeArea()
         .navigationBarHidden(true)

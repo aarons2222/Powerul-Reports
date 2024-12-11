@@ -52,11 +52,13 @@ actor ProductSubscription {
         case .unverified(_, let error):
             print("ProductSubscription: Transaction verification failed: \(error)")
             let status = SubscriptionStatus.notSubscribed
+            
             Task { @MainActor in
                 await SubscriptionPersistence.shared.saveSubscriptionStatus(status)
             }
             return status
         }
+        
         
         // Check if the subscription has expired
         if let expirationDate = transaction.expirationDate {
@@ -65,7 +67,7 @@ actor ProductSubscription {
                 print("ProductSubscription: Subscription has expired")
                 let status = SubscriptionStatus.notSubscribed
                 Task { @MainActor in
-                    await SubscriptionPersistence.shared.saveSubscriptionStatus(status)
+                     SubscriptionPersistence.shared.saveSubscriptionStatus(status)
                 }
                 return status
             }

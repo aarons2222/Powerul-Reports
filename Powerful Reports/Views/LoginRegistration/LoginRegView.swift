@@ -29,7 +29,6 @@ struct LoginRegView: View {
     @State private var showPasswordReset = false
     @State private var resetMessage = ""
     @State private var resetSuccess = false
-    @State private var rememberMe = false
     @FocusState private var focusedField: Field?
     
     @State private var errorMessage: String = ""
@@ -106,51 +105,35 @@ struct LoginRegView: View {
                             .disabled(isLoading)
                             
                             // Password field
-                            VStack(alignment: .leading, spacing: 4) {
-                                CustomSecureField(
-                                    text: $password,
-                                    placeholder: "Password",
-                                    showPassword: $showPassword,
-                                    focusedField: _focusedField,
-                                    field: .password,
-                                    onSubmit: {
-                                        if isSignUp {
-                                            focusedField = .confirmPassword
-                                        } else {
-                                            handleSignIn()
-                                        }
+                            CustomSecureField(
+                                text: $password,
+                                placeholder: "Password",
+                                showPassword: $showPassword,
+                                focusedField: _focusedField,
+                                field: .password,
+                                onSubmit: {
+                                    if isSignUp {
+                                        focusedField = .confirmPassword
+                                    } else {
+                                        handleSignIn()
                                     }
-                                )
-                                
-                                if !password.isEmpty && !passwordValidation.isValid {
-                                    Text(passwordValidation.message)
-                                        .foregroundColor(.red)
-                                        .font(.caption)
                                 }
-                            }
+                            )
                             
                             if isSignUp {
                                 // Confirm Password field
-                                VStack(alignment: .leading, spacing: 4) {
-                                    CustomTextField(
-                                        text: $confirmPassword,
-                                        placeholder: "Confirm Password",
-                                        systemImage: "lock",
-                                        isSecure: !showConfirmPassword,
-                                        showSecureToggle: true,
-                                        onToggleSecure: { showConfirmPassword.toggle() }
-                                    )
-                                    .focused($focusedField, equals: .confirmPassword)
-                                    .submitLabel(.go)
-                                    .onSubmit(handleSignUp)
-                                    .disabled(isLoading)
-                                    
-                                    if !confirmPassword.isEmpty && password != confirmPassword {
-                                        Text("Passwords do not match")
-                                            .foregroundColor(.red)
-                                            .font(.caption)
-                                    }
-                                }
+                                CustomTextField(
+                                    text: $confirmPassword,
+                                    placeholder: "Confirm Password",
+                                    systemImage: "lock",
+                                    isSecure: !showConfirmPassword,
+                                    showSecureToggle: true,
+                                    onToggleSecure: { showConfirmPassword.toggle() }
+                                )
+                                .focused($focusedField, equals: .confirmPassword)
+                                .submitLabel(.go)
+                                .onSubmit(handleSignUp)
+                                .disabled(isLoading)
                             } else {
                                 // Forgot Password Link (only show in sign-in mode)
                                 HStack {
@@ -163,13 +146,6 @@ struct LoginRegView: View {
                                     .disabled(isLoading)
                                 }
                                 .padding(.top, -8)
-                                
-                                Toggle(isOn: $rememberMe) {
-                                    Text("Remember me")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                }
-                                .padding(.horizontal)
                             }
                             
                             // Error message
@@ -194,11 +170,10 @@ struct LoginRegView: View {
                                     if isLoading {
                                         ProgressView()
                                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    } else {
-                                        Text(isSignUp ? "Sign Up" : "Sign In")
-                                            .font(.headline)
-                                            .foregroundColor(.white)
                                     }
+                                    Text(isSignUp ? "Sign Up" : "Sign In")
+                                        .foregroundColor(.white)
+                                        .font(.headline)
                                 }
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 45)
@@ -208,12 +183,11 @@ struct LoginRegView: View {
                                         startPoint: .leading,
                                         endPoint: .trailing
                                     )
-                                    .opacity(isLoading || !isValidInput ? 0.5 : 1)
                                 )
                                 .cornerRadius(27)
                                 .shadow(color: .blue.opacity(0.3), radius: 10, x: 0, y: 5)
                             }
-                            .disabled(isLoading || !isValidInput)
+                            .disabled(isLoading)
                             
                             // Toggle between Sign Up and Sign In
                             Button(action: {
@@ -255,19 +229,6 @@ struct LoginRegView: View {
         .onAppear {
             withAnimation(.easeOut(duration: 0.8)) {
                 isAnimating = true
-            }
-            
-            // Try to load saved credentials
-            if !isSignUp {
-                do {
-                    let credentials = try KeychainManager.shared.retrieveCredentials()
-                    email = credentials.email
-                    password = credentials.password
-                    rememberMe = true
-                } catch {
-                    // No saved credentials or error occurred
-                    print("No saved credentials found")
-                }
             }
         }
         .onChange(of: authModel.isAuthenticated) { isAuthenticated in
@@ -313,36 +274,30 @@ struct LoginRegView: View {
         }
     }
     
-    private var isValidInput: Bool {
-        let emailTrimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !emailTrimmed.isEmpty && passwordValidation.isValid
-    }
-    
     private func handleSignIn() {
+        let emailTrimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Validate email
+        if emailTrimmed.isEmpty {
+            errorMessage = "Email is required"
+            return
+        }
+        
+        // Validate password
+        let validation = passwordValidation
+        if !validation.isValid {
+            errorMessage = validation.message
+            return
+        }
+        
         isLoading = true
         errorMessage = ""
         
         Task {
             do {
-                // First try to sign in
                 try await authModel.signIn(email: email, password: password)
-                
-                // If sign in is successful and remember me is enabled, save credentials
-                if rememberMe {
-                    do {
-                        try KeychainManager.shared.saveCredentials(email: email, password: password)
-                    } catch {
-                        print("Failed to save credentials: \(error)")
-                    }
-                } else {
-                    // If remember me is not enabled, ensure no credentials are saved
-                    try? KeychainManager.shared.deleteCredentials()
-                }
-                
                 isLoading = false
             } catch {
-                // If sign in fails, clear any saved credentials
-                try? KeychainManager.shared.deleteCredentials()
                 isLoading = false
                 errorMessage = error.localizedDescription
             }
@@ -350,8 +305,23 @@ struct LoginRegView: View {
     }
     
     private func handleSignUp() {
+        let emailTrimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Validate email
+        if emailTrimmed.isEmpty {
+            errorMessage = "Email is required"
+            return
+        }
+        
+        // Validate password
+        let validation = passwordValidation
+        if !validation.isValid {
+            errorMessage = validation.message
+            return
+        }
+        
         isLoading = true
-        errorMessage = "" // Clear any previous error
+        errorMessage = ""
         authModel.signUp(email: email, password: password)
     }
     
@@ -400,9 +370,6 @@ struct LoginRegView: View {
         Task {
             do {
                 try await authModel.signOut()
-                // Always clear saved credentials when signing out
-                try? KeychainManager.shared.deleteCredentials()
-                rememberMe = false
             } catch {
                 errorMessage = error.localizedDescription
             }
