@@ -23,7 +23,21 @@ struct OutcomesChartView: View {
     }
     
     var body: some View {
-        VStack {
+
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+
+                    Text("Inspection Outcomes")
+                        .font(.title3)
+                        .fontWeight(.regular)
+                        .foregroundColor(.color4)
+                    Spacer()
+                    
+                    Image(systemName: "plus.circle")
+                        .font(.title2)
+                        .foregroundColor(.color1)
+                }
+                .padding(.bottom, 20)
         
                 Chart(viewModel.outcomesDistribution) { data in
                     SectorMark(

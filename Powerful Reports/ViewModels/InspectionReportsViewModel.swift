@@ -395,20 +395,23 @@ class InspectionReportsViewModel: ObservableObject {
     }
     
     func getFilteredTotalCount(for data: [OutcomeData]) -> Int {
-        // Use the data passed to the view which is already filtered
+      
         return data.reduce(0) { $0 + $1.count }
     }
     
     func getTotalReportsCount() -> Int {
+        
         return reports.count
     }
     
     func getInspectorCount() -> Int {
+        
         let uniqueInspectors = Set(reports.map { $0.inspector })
         return uniqueInspectors.count
     }
     
     func getReportsByRating(_ rating: String) -> [Report] {
+        
         return filteredReports.filter { report in
             report.ratings.contains { $0.rating == rating }
         }
