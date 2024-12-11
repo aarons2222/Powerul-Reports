@@ -25,7 +25,7 @@ struct HomeView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(SubscriptionStatusModel.self) private var subscriptionStatusModel
     @State var showSettings = false
-    @AppStorage("selectedTimeFilter") private var selectedTimeFilter: TimeFilter = .last12Months
+
     @State private var path = [NavigationPath]()
     @State private var isInitialized = false
     
@@ -213,7 +213,7 @@ struct HomeView: View {
                     
                     SegmentedControl(
                         tabs: TimeFilter.allCases,
-                        activeTab: $selectedTimeFilter,
+                        activeTab: $viewModel.selectedTimeFilter,
                         height: 35,
                         extraText: nil,
                         font: .callout,
@@ -228,10 +228,10 @@ struct HomeView: View {
                             .frame(maxHeight: .infinity, alignment: .bottom)
                     }
                     .padding(.horizontal)
-                    .onChange(of: selectedTimeFilter) {
-                                                print("Filter changed to: \(selectedTimeFilter)")  // Debug print
+                    .onChange(of: viewModel.selectedTimeFilter) {
+                        print("Filter changed to: \(viewModel.selectedTimeFilter)")  // Debug print
                                                 Task {
-                                                    await viewModel.filterReports(timeFilter: selectedTimeFilter)
+                                                    await viewModel.filterReports(timeFilter: viewModel.selectedTimeFilter)
                                                 }
                                             }
                    
@@ -429,7 +429,7 @@ struct HomeView: View {
         .task {
             guard !isInitialized else { return }
             isInitialized = true
-            await viewModel.filterReports(timeFilter: selectedTimeFilter)
+            await viewModel.filterReports(timeFilter: viewModel.selectedTimeFilter)
             
             if subscriptionStatusModel.subscriptionStatus == .notSubscribed {
                 viewModel.isPremium = false

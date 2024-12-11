@@ -27,17 +27,21 @@ actor ProductSubscription {
             let lhsStatus = SubscriptionStatus(
                 productID: lhs.transaction.unsafePayloadValue.productID,
                 ids: ids
-            ) ?? .notSubscribed
+            ) ?? SubscriptionStatus.notSubscribed
             let rhsStatus = SubscriptionStatus(
                 productID: rhs.transaction.unsafePayloadValue.productID,
                 ids: ids
-            ) ?? .notSubscribed
+            ) ?? SubscriptionStatus.notSubscribed
             return lhsStatus < rhsStatus
         }
         
         guard let effectiveStatus else {
             print("ProductSubscription: No effective status found")
-            return .notSubscribed
+            let status = SubscriptionStatus.notSubscribed
+            Task { @MainActor in
+                await SubscriptionPersistence.shared.saveSubscriptionStatus(status)
+            }
+            return status
         }
         
         let transaction: Transaction
@@ -47,34 +51,45 @@ actor ProductSubscription {
             transaction = t
         case .unverified(_, let error):
             print("ProductSubscription: Transaction verification failed: \(error)")
-            return .notSubscribed
+            let status = SubscriptionStatus.notSubscribed
+            Task { @MainActor in
+                await SubscriptionPersistence.shared.saveSubscriptionStatus(status)
+            }
+            return status
         }
         
-        if case .autoRenewable = transaction.productType {
-            if !(transaction.revocationDate == nil && transaction.revocationReason == nil) {
-                print("ProductSubscription: Subscription revoked")
-                return .notSubscribed
-            }
-            
-            if let subscriptionExpirationDate = transaction.expirationDate {
-                if subscriptionExpirationDate.timeIntervalSince1970 < Date().timeIntervalSince1970 {
-                    print("ProductSubscription: Subscription expired")
-                    return .notSubscribed
+        // Check if the subscription has expired
+        if let expirationDate = transaction.expirationDate {
+            print("ProductSubscription: Checking expiration date: \(expirationDate)")
+            if expirationDate <= Date() {
+                print("ProductSubscription: Subscription has expired")
+                let status = SubscriptionStatus.notSubscribed
+                Task { @MainActor in
+                    await SubscriptionPersistence.shared.saveSubscriptionStatus(status)
                 }
-                // Return status with expiry date
-                let status = SubscriptionStatus(
-                    productID: transaction.productID,
-                    ids: ids,
-                    expiryDate: subscriptionExpirationDate
-                ) ?? .notSubscribed
-                print("ProductSubscription: Status determined - \(status)")
                 return status
             }
         }
         
-        let finalStatus = SubscriptionStatus(productID: transaction.productID, ids: ids) ?? .notSubscribed
-        print("ProductSubscription: Final status - \(finalStatus)")
-        return finalStatus
+        guard let subscriptionStatus = SubscriptionStatus(
+            productID: transaction.productID,
+            ids: ids,
+            expiryDate: transaction.expirationDate
+        ) else {
+            print("ProductSubscription: Could not create subscription status")
+            let status = SubscriptionStatus.notSubscribed
+            Task { @MainActor in
+                await SubscriptionPersistence.shared.saveSubscriptionStatus(status)
+            }
+            return status
+        }
+        
+        print("ProductSubscription: Returning subscription status: \(subscriptionStatus)")
+        // Batch the status update with any other pending updates
+        Task { @MainActor in
+            await SubscriptionPersistence.shared.saveSubscriptionStatus(subscriptionStatus)
+        }
+        return subscriptionStatus
     }
 }
 

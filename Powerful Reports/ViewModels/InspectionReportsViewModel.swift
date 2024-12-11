@@ -9,6 +9,7 @@ class InspectionReportsViewModel: ObservableObject {
     @Published private(set) var searchResults: [String: [Report]] = [:] // Grouped search results
     @Published private(set) var searchDates: [String] = [] // Sorted dates for search results
     @Published private(set) var provisionTypeDistribution: [OutcomeData] = []
+    @Published private(set) var outcomesDistribution: [OutcomeData] = []
     @Published var filteredReports: [Report] = []
     @Published var reportsCount: Int = 0
     @Published var lastFirebaseUpdate: Date?
@@ -16,22 +17,48 @@ class InspectionReportsViewModel: ObservableObject {
     @Published var showPaywall: Bool = false
     @Published var isPremium: Bool = false {
         didSet {
-            if isPremium {
-                loadCachedReports()
-                fetchReports()
-            } else {
-                self.reports = DummyDataGenerator.generateDummyReports(count: 500)
-                self.filteredReports = self.reports
-                self.reportsCount = self.reports.count
-                Task { @MainActor in
-                    await buildCaches()
-                    await updateProvisionTypeDistribution()
+            handleSubscriptionChange()
+        }
+    }
+    
+    private var cancellables = Set<AnyCancellable>()
+    
+    init() {
+        setupSubscriptionObserver()
+        isPremium = SubscriptionPersistence.shared.isPremium
+    }
+    
+    private func setupSubscriptionObserver() {
+        NotificationCenter.default.publisher(for: .subscriptionStatusDidChange)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.isPremium = SubscriptionPersistence.shared.isPremium
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func handleSubscriptionChange() {
+        isLoading = true
+        
+        if isPremium {
+            // Switch to Firebase data for premium users
+            fetchReports()
+        } else {
+            // Switch to dummy data for non-premium users
+            self.reports = DummyDataGenerator.generateDummyReports(count: 500)
+            self.filteredReports = self.reports
+            self.reportsCount = self.reports.count
+            Task {
+                await buildCaches()
+                await updateProvisionTypeDistribution()
+                await updateOutcomesDistribution(for: self.reports)
+                await MainActor.run {
+                    self.isLoading = false
                 }
             }
         }
     }
-
-
+    
     // Filter states
     @Published var selectedInspector: String?
     @Published var selectedAuthority: String?
@@ -40,12 +67,11 @@ class InspectionReportsViewModel: ObservableObject {
     @Published var selectedOutcome: String?
     @Published var selectedDateRange: ClosedRange<Date>?
     
-    // Time Filter
-    private var currentTimeFilter: TimeFilter = .last12Months
+    @Published var selectedTimeFilter: TimeFilter = .last12Months
     
     // Caching structures
-     var groupedReports: [String: [Report]] = [:]
-      var sortedDates: [String] = []
+    var groupedReports: [String: [Report]] = [:]
+    var sortedDates: [String] = []
     private var reportsByInspector: [String: [Report]] = [:]
     private var reportsByAuthority: [String: [Report]] = [:]
     private var reportsByDate: [String: [Report]] = [:]
@@ -62,7 +88,6 @@ class InspectionReportsViewModel: ObservableObject {
     // Search
     private var searchCancellable: AnyCancellable?
     
- 
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy"
@@ -136,26 +161,6 @@ class InspectionReportsViewModel: ObservableObject {
             return overallRating.rating
         }
         return nil
-    }
-    
-    init() {
-        // Initial setup with dummy data
-        self.reports = DummyDataGenerator.generateDummyReports(count: 500)
-        self.filteredReports = self.reports
-        self.reportsCount = self.reports.count
-        
-        Task { @MainActor in
-            await buildCaches()
-            await updateProvisionTypeDistribution()
-        }
-        
-        // Setup search functionality
-        searchCancellable = $searchText
-            .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
-            .removeDuplicates()
-            .sink { [weak self] searchText in
-                self?.performSearch(searchText)
-            }
     }
     
     // MARK: - Cache Management
@@ -321,6 +326,7 @@ class InspectionReportsViewModel: ObservableObject {
                 Task { @MainActor in
                     await self.buildCaches()
                     await self.updateProvisionTypeDistribution()
+                    await self.updateOutcomesDistribution(for: self.reports)
                     
                     // Initialize pagination
                     self.currentPage = 0
@@ -360,6 +366,31 @@ class InspectionReportsViewModel: ObservableObject {
         
         await MainActor.run {
             self.provisionTypeDistribution = distribution
+        }
+    }
+    
+    private func updateOutcomesDistribution(for reports: [Report]) async {
+        let processedOutcomes = reports.map { report -> (String, Color) in
+            if !report.outcome.isEmpty {
+                return (report.outcome, report.outcome == "Met" ? .color2 : .color6)
+            } else if let overallRating = report.ratings.first(where: { $0.category == RatingCategory.overallEffectiveness.rawValue }),
+                      let ratingValue = RatingValue(rawValue: overallRating.rating) {
+                return (overallRating.rating, ratingValue.color)
+            }
+            return ("Unknown", .gray)
+        }
+        
+        let outcomeCounts = Dictionary(grouping: processedOutcomes) { $0.0 }
+        let outcomes = outcomeCounts.map { outcome, reports in
+            OutcomeData(
+                outcome: outcome,
+                count: reports.count,
+                color: reports.first?.1 ?? .gray
+            )
+        }.sorted { $0.count > $1.count }
+        
+        await MainActor.run {
+            self.outcomesDistribution = outcomes
         }
     }
     
@@ -485,9 +516,11 @@ class InspectionReportsViewModel: ObservableObject {
             
             let filteredNewReports = newReports.filter { report in
                 guard let reportDate = self.dateFormatter.date(from: report.date) else { return false }
-                return reportDate >= self.currentTimeFilter.date
+                return reportDate >= self.selectedTimeFilter.date
             }
-            
+            Task{
+               await self.updateOutcomesDistribution(for: filteredNewReports)
+            }
             // Process in chunks of 50 reports
             let chunkSize = 50
             for i in stride(from: 0, to: filteredNewReports.count, by: chunkSize) {
@@ -508,14 +541,13 @@ class InspectionReportsViewModel: ObservableObject {
     }
     
     func resetAndReload(timeFilter: TimeFilter) {
-        currentTimeFilter = timeFilter
+        selectedTimeFilter = timeFilter
         groupedReports.removeAll()
         sortedDates.removeAll()
         currentPage = 0
         hasMoreData = true
         loadNextPage()
     }
-    
     
     func filterReports(timeFilter: TimeFilter) async {
         let filterDate = timeFilter.date
@@ -536,6 +568,7 @@ class InspectionReportsViewModel: ObservableObject {
             self.reportsCount = self.filteredReports.count
             Task {
                 await self.updateProvisionTypeDistribution()
+                await self.updateOutcomesDistribution(for: self.filteredReports)
             }
         }
     }
@@ -628,8 +661,6 @@ class InspectionReportsViewModel: ObservableObject {
             report.themes.contains { $0.topic.lowercased().contains(lowercasedQuery) }
         }
     }
-    
-    
     
     private func performSearch(_ query: String) {
         guard !query.isEmpty else {
@@ -770,9 +801,10 @@ class InspectionReportsViewModel: ObservableObject {
             
             // Update the provision type distribution
             await self.updateProvisionTypeDistribution()
+            await self.updateOutcomesDistribution(for: self.filteredReports)
         }
     }
-
+    
     func clearFilters() {
         selectedInspector = nil
         selectedAuthority = nil
@@ -785,30 +817,5 @@ class InspectionReportsViewModel: ObservableObject {
     
     deinit {
         listener?.remove()
-    }
-    
-    // Your existing dummy data
-    static let dummyReports: [Report] = [
-        // ... your existing dummy reports ...
-    ]
-}
-
-extension Calendar {
-    func startOfMonth(for date: Date) -> Date {
-        let components = dateComponents([.year, .month], from: date)
-        return self.date(from: components)!
-    }
-    
-    func endOfMonth(for date: Date) -> Date {
-        let components = DateComponents(month: 1, day: -1)
-        return self.date(byAdding: components, to: startOfMonth(for: date))!
-    }
-}
-
-extension Date {
-    var monthYearString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM yyyy"
-        return formatter.string(from: self)
     }
 }
