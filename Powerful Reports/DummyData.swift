@@ -5,7 +5,6 @@
 //  Created by Aaron Strickland on 25/11/2024.
 //
 
-
 import Foundation
 import SwiftUI
 
@@ -126,13 +125,22 @@ struct DummyDataGenerator {
                 
                 let outcome: String
                 let previousInspection: String
+                let ratings: [Rating]
                 
                 if isComplianceCheck {
-                    outcome = Double.random(in: 0...1) < 0.8 ? RatingValue.met.rawValue : RatingValue.notmet.rawValue
-                    previousInspection = Double.random(in: 0...1) < 0.7 ? RatingValue.met.rawValue : RatingValue.notmet.rawValue
+                    // For compliance checks, ensure previous inspection matches the Met/Not Met pattern
+                    let isCurrentMet = Double.random(in: 0...1) < 0.8
+                    let isPreviousMet = Double.random(in: 0...1) < 0.7
+                    outcome = isCurrentMet ? RatingValue.met.rawValue : RatingValue.notmet.rawValue
+                    previousInspection = isPreviousMet ? RatingValue.met.rawValue : RatingValue.notmet.rawValue
+                    ratings = []
                 } else {
+                    // Regular inspections have ratings and no met/not met outcome
                     outcome = RatingValue.none.rawValue
-                    previousInspection = Double.random(in: 0...1) < 0.7 ? RatingValue.good.rawValue : RatingValue.requiresImprovement.rawValue
+                    ratings = generator.generateRatings(includeRatings: true)
+                    // Previous inspection should be a standard rating for regular inspections
+                    let previousRating = Double.random(in: 0...1) < 0.7 ? RatingValue.good.rawValue : RatingValue.requiresImprovement.rawValue
+                    previousInspection = previousRating
                 }
                 
                 return Report(
@@ -142,13 +150,13 @@ struct DummyDataGenerator {
                     localAuthority: generator.randomItem(generator.localAuthorities),
                     outcome: outcome,
                     previousInspection: previousInspection,
-                    ratings: generator.generateRatings(includeRatings: !isComplianceCheck),
+                    ratings: ratings,
                     referenceNumber: generator.generateReferenceNumber(),
                     themes: generator.generateThemes(isCompliance: isComplianceCheck),
                     typeOfProvision: generator.randomItem(generator.typeOfProvisions),
                     timestamp: timestamp
                 )
-            }.sorted { $0.timestamp.date > $1.timestamp.date } // Sort by date descending
+            }.sorted { $0.timestamp.date > $1.timestamp.date }
         }
     
     
@@ -157,6 +165,8 @@ struct DummyDataGenerator {
         
         let mainRating = getWeightedRating()
         return RatingCategory.allCases.map { category in
+            // All ratings should be standard grades (Outstanding/Good/Requires Improvement/Inadequate)
+            // Never include Met/Not Met in ratings
             if category == .overallEffectiveness {
                 return Rating(category: category.rawValue, rating: mainRating.rawValue)
             } else {
@@ -165,6 +175,11 @@ struct DummyDataGenerator {
                 let possibleRange = max(0, currentIndex - 1)...min(RatingValue.allCases.count - 1, currentIndex + 1)
                 let randomIndex = Int.random(in: possibleRange)
                 let rating = RatingValue.allCases[randomIndex]
+                
+                // Ensure we never use Met/Not Met in regular inspection ratings
+                if rating == .met || rating == .notmet {
+                    return Rating(category: category.rawValue, rating: mainRating.rawValue)
+                }
                 return Rating(category: category.rawValue, rating: rating.rawValue)
             }
         }
@@ -196,4 +211,3 @@ struct DummyDataGenerator {
     
     // MARK: - Public Generator Function
 }
-
