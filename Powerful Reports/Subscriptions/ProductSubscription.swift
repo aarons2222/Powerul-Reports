@@ -39,7 +39,7 @@ actor ProductSubscription {
             print("ProductSubscription: No effective status found")
             let status = SubscriptionStatus.notSubscribed
             Task { @MainActor in
-                await SubscriptionPersistence.shared.saveSubscriptionStatus(status)
+                 SubscriptionPersistence.shared.saveSubscriptionStatus(status)
             }
             return status
         }
@@ -54,7 +54,7 @@ actor ProductSubscription {
             let status = SubscriptionStatus.notSubscribed
             
             Task { @MainActor in
-                await SubscriptionPersistence.shared.saveSubscriptionStatus(status)
+                 SubscriptionPersistence.shared.saveSubscriptionStatus(status)
             }
             return status
         }
@@ -81,7 +81,7 @@ actor ProductSubscription {
             print("ProductSubscription: Could not create subscription status")
             let status = SubscriptionStatus.notSubscribed
             Task { @MainActor in
-                await SubscriptionPersistence.shared.saveSubscriptionStatus(status)
+                 SubscriptionPersistence.shared.saveSubscriptionStatus(status)
             }
             return status
         }
@@ -89,7 +89,7 @@ actor ProductSubscription {
         print("ProductSubscription: Returning subscription status: \(subscriptionStatus)")
         // Batch the status update with any other pending updates
         Task { @MainActor in
-            await SubscriptionPersistence.shared.saveSubscriptionStatus(subscriptionStatus)
+             SubscriptionPersistence.shared.saveSubscriptionStatus(subscriptionStatus)
         }
         return subscriptionStatus
     }

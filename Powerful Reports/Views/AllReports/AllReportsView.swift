@@ -82,6 +82,7 @@ struct AllReportsView: View {
                         .padding(.horizontal)
                         .padding(.vertical, 4)
                     }
+                    
                     .frame(height: 36)
                     .transition(.asymmetric(
                         insertion: .move(edge: .top).combined(with: .opacity),
@@ -289,7 +290,11 @@ struct SearchResultsView: View {
                 }
             }
             .padding(.horizontal)
+                Spacer()
+                .frame(height: 20)
         }
+      
+        .scrollIndicators(.hidden)
     }
 }
 

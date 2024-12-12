@@ -41,11 +41,23 @@ struct Paywall: View {
         .buttonBorderShape(.capsule)
         .tint(.color1)
         .onInAppPurchaseCompletion { product, result in
-            if case .success(_) = result {
-                showThankYouToast = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    dismiss()
+            switch result {
+            case .success(let purchaseResult):
+                switch purchaseResult {
+                case .success(let transaction):
+                    showThankYouToast = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        dismiss()
+                    }
+                case .pending:
+                    print("Purchase is pending approval")
+                case .userCancelled:
+                    print("Purchase was cancelled by user")
+                @unknown default:
+                    print("Unknown purchase result")
                 }
+            case .failure(let error):
+                print("Purchase error: \(error.localizedDescription)")
             }
         }
         .overlay {
