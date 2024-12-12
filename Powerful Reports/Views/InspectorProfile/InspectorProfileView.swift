@@ -41,6 +41,8 @@ struct InspectorProfileView: View {
             CustomHeaderVIew(title: profile.name)
             
             ScrollView {
+                Color.clear.frame(height: 20)
+                
                 CustomCardView("Recent Reports",
                          navigationLink: recentReports.count > 5 ?
                          AnyView(
@@ -122,7 +124,8 @@ struct InspectorProfileView: View {
                 })
             }
             .scrollIndicators(.hidden)
-            .padding()
+            .padding(.horizontal)
+            .padding(.bottom)
         }
         .ignoresSafeArea()
         .navigationBarHidden(true)

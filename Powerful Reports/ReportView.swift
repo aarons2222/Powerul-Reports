@@ -24,6 +24,7 @@ struct ReportView: View {
                 .padding(0)
             
             ScrollView {
+                Color.clear.frame(height: 20)
                 VStack(spacing: 20) {
                     // Report Information Card
                     CustomCardView("Report Information") {

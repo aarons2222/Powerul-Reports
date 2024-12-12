@@ -89,6 +89,7 @@ struct AllReportsView: View {
                     ))
                 }
                 
+                
                 if !mainViewModel.searchText.isEmpty {
                     SearchResultsView(results: mainViewModel.searchResults.values.flatMap { $0 }, path: $path)
                 } else {
@@ -96,9 +97,10 @@ struct AllReportsView: View {
                 }
             }
         }
-        .keyboardAdaptive()
+
         .navigationBarHidden(true)
         .ignoresSafeArea()
+       
         .onChange(of: selectedTimeFilter) {
             Task {
                 viewModel.resetAndReload(timeFilter: selectedTimeFilter)
@@ -355,21 +357,21 @@ struct RatingGrid: View {
 
     
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 8) { // Reduce vertical spacing
+        LazyVGrid(columns: columns, spacing: 8) {
             ForEach(Array(RatingValue.allCases.filter { $0 != .none }), id: \.self) { rating in
-                VStack(spacing: 4) { // Reduce spacing between circle and text
+                VStack(spacing: 4) {
                     CircleButton(color: rating.color,
                                isSelected: selectedRating == rating,
-                               size: 50) // Reduce circle size
+                               size: 50)
                         .onTapGesture {
                             selectedRating = rating
                         }
                     
                     Text(rating.rawValue.capitalized)
                         .foregroundStyle(rating.color)
-                        .font(.caption2) // Use smaller font
-                        .minimumScaleFactor(0.8) // Allow text to scale down if needed
-                        .lineLimit(1) // Ensure single line
+                        .font(.caption2)
+                        .minimumScaleFactor(0.8)
+                        .lineLimit(1)
                 }
             }
         }
@@ -381,8 +383,8 @@ struct CircleButton: View {
     var isSelected: Bool
     var size: CGFloat
     
-    private var innerCircleSize: CGFloat { size * 0.75 }  // Inner circle is 75% of outer
-    private var strokeWidth: CGFloat { size * 0.1 }       // Stroke is 10% of size
+    private var innerCircleSize: CGFloat { size * 0.75 }
+    private var strokeWidth: CGFloat { size * 0.1 }
     
     var body: some View {
         ZStack {

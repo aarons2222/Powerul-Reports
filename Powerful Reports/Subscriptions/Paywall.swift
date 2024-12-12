@@ -19,6 +19,9 @@ struct Paywall: View {
       
     
     var body: some View {
+        
+        
+        
         SubscriptionStoreView(groupID: subscriptionGroupID) {
             VStack(spacing: 25) {
                 headerView
@@ -84,6 +87,7 @@ struct Paywall: View {
             }
             .ignoresSafeArea()
         }
+        
     }
     
     private var headerView: some View {

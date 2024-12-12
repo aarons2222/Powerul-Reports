@@ -25,6 +25,7 @@ class InspectionReportsViewModel: ObservableObject {
     
     init() {
         setupSubscriptionObserver()
+        setupSearchObserver()
         isPremium = SubscriptionPersistence.shared.isPremium
     }
     
@@ -36,6 +37,19 @@ class InspectionReportsViewModel: ObservableObject {
             }
             .store(in: &cancellables)
     }
+    
+    
+    
+    private func setupSearchObserver() {
+        $searchText
+            .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
+            .removeDuplicates()
+            .sink { [weak self] query in
+                self?.performSearch(query)
+            }
+            .store(in: &cancellables)
+    }
+    
     
     private func handleSubscriptionChange() {
         isLoading = true
@@ -667,24 +681,27 @@ class InspectionReportsViewModel: ObservableObject {
     
     private func performSearch(_ query: String) {
         guard !query.isEmpty else {
-            Task { @MainActor in
-                self.searchResults = [:]
-                self.searchDates = []
-            }
+            self.searchResults = [:]
+            self.searchDates = []
             return
         }
-        
+
         let lowercasedQuery = query.lowercased()
+        
         let results = reports.filter { report in
+            // More lenient search across multiple fields
             report.referenceNumber.lowercased().contains(lowercasedQuery) ||
             report.inspector.lowercased().contains(lowercasedQuery) ||
             report.localAuthority.lowercased().contains(lowercasedQuery) ||
             report.typeOfProvision.lowercased().contains(lowercasedQuery) ||
-            report.themes.contains { $0.topic.lowercased().contains(lowercasedQuery) }
+            report.themes.contains { $0.topic.lowercased().contains(lowercasedQuery) } ||
+            // Add more fields as needed
+            report.date.lowercased().contains(lowercasedQuery)
         }
-        
+
         Task { @MainActor in
             let groupedSearchResults = Dictionary(grouping: results) { $0.date }
+            
             self.searchResults = groupedSearchResults
             self.searchDates = groupedSearchResults.keys.sorted { date1, date2 in
                 guard let date1 = DateFormatter.reportDate.date(from: date1),
@@ -695,6 +712,7 @@ class InspectionReportsViewModel: ObservableObject {
             }
         }
     }
+
     
     private func applyFilters(to reports: [Report]) -> [Report] {
         var filteredReports = reports

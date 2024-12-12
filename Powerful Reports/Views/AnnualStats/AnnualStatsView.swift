@@ -291,9 +291,13 @@ struct AnnualStatsView: View {
                         }
                         .padding()
                     }
+                    
+                    Color.clear
+                        .frame(height: 20)
                 }
                 .padding(.horizontal)
             }
+            .scrollIndicators(.hidden)
         }
         .ignoresSafeArea()
         .navigationBarHidden(true)

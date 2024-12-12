@@ -212,7 +212,9 @@ struct ProvisionInformation: View {
                         }
                     }
                     .padding()
+                    
                 }
+                .scrollIndicators(.hidden)
             }
         }
         .ignoresSafeArea()

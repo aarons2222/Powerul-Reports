@@ -81,9 +81,11 @@ struct AreaView: View {
         let statistics = ThemeAnalyzer.getThemeStatistics(from: reports, for: area.name)
 
 
-        VStack{
+        VStack(spacing: 0){
             CustomHeaderVIew(title: area.name)
         ScrollView {
+            
+            Color.clear.frame(height: 20)
             
             VStack(spacing: 20) {
                 
@@ -179,6 +181,7 @@ struct AreaView: View {
             }
             .padding()
         }
+        .scrollIndicators(.hidden)
         
     }
         .navigationBarHidden(true)
