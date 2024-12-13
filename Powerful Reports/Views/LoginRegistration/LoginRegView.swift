@@ -231,13 +231,13 @@ struct LoginRegView: View {
                 isAnimating = true
             }
         }
-        .onChange(of: authModel.isAuthenticated) { isAuthenticated in
-            if isAuthenticated {
+        .onChange(of: authModel.isAuthenticated) {
+            if authModel.isAuthenticated {
                 focusedField = nil
             }
         }
-        .onChange(of: authModel.errorMessage) { newValue in
-            if !newValue.isEmpty {
+        .onChange(of: authModel.errorMessage) {
+            if !authModel.errorMessage.isEmpty {
                 isLoading = false
             }
         }
@@ -295,11 +295,8 @@ struct LoginRegView: View {
         
         Task {
             do {
-                try await authModel.signIn(email: email, password: password)
+                authModel.signIn(email: email, password: password)
                 isLoading = false
-            } catch {
-                isLoading = false
-                errorMessage = error.localizedDescription
             }
         }
     }
@@ -369,9 +366,7 @@ struct LoginRegView: View {
     private func handleSignOut() {
         Task {
             do {
-                try await authModel.signOut()
-            } catch {
-                errorMessage = error.localizedDescription
+                 authModel.signOut()
             }
         }
     }

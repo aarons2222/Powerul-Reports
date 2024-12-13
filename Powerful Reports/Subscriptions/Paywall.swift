@@ -44,7 +44,7 @@ struct Paywall: View {
             switch result {
             case .success(let purchaseResult):
                 switch purchaseResult {
-                case .success(let transaction):
+                case .success(let _transaction):
                     showThankYouToast = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                         dismiss()

@@ -76,8 +76,8 @@ struct OutcomesChartView: View {
         }
         .padding()
         .cardBackground()
-        .onChange(of: viewModel.outcomesDistribution) { newValue in
-            guard !newValue.isEmpty else { return }
+        .onChange(of: viewModel.outcomesDistribution) {
+            guard !viewModel.outcomesDistribution.isEmpty else { return }
             
             // Reset animation state
             withAnimation(.linear(duration: 0.3)) {

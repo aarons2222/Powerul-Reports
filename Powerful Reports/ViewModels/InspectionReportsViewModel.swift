@@ -519,7 +519,7 @@ class InspectionReportsViewModel: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             guard let self = self else { return }
             
-            let newItems = Array(self.filteredReports[startIndex..<endIndex])
+          //  let newItems = Array(self.filteredReports[startIndex..<endIndex])
             self.currentPage += 1
             self.hasMoreData = endIndex < self.filteredReports.count
             self.isLoading = false
