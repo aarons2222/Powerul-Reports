@@ -15,14 +15,32 @@ enum Field: Hashable {
     case email, password, confirmPassword
 }
 
+struct PasswordRequirement: Identifiable {
+    let id = UUID()
+    let text: String
+    var isMet: Bool
+}
+
+struct PasswordRequirementRow: View {
+    let requirement: PasswordRequirement
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: requirement.isMet ? "checkmark.circle.fill" : "circle")
+                .foregroundColor(requirement.isMet ? .color2 : .gray)
+            Text(requirement.text)
+                .font(.caption)
+                .foregroundColor(requirement.isMet ? .primary : .gray)
+        }
+    }
+}
+
 struct LoginRegView: View {
     @EnvironmentObject var authModel: AuthenticationViewModel
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
     @State private var isSignUp = false
-    @State private var isAnimating = false
-    @State private var isLoading = false
     @State private var showPassword = false
     @State private var showConfirmPassword = false
     @State private var showResetAlert = false
@@ -32,26 +50,28 @@ struct LoginRegView: View {
     @FocusState private var focusedField: Field?
     
     @State private var errorMessage: String = ""
+    @State private var showToast: Bool = false
+    @State private var toastMessage: String = ""
+    @State private var passwordRequirements: [PasswordRequirement] = [
+        PasswordRequirement(text: "At least 8 characters", isMet: false),
+        PasswordRequirement(text: "Contains a number", isMet: false),
+        PasswordRequirement(text: "Contains a special character", isMet: false),
+        PasswordRequirement(text: "Passwords match", isMet: false)
+    ]
   
     private var passwordValidation: (isValid: Bool, message: String) {
+        updatePasswordRequirements()
+        return (passwordRequirements.allSatisfy { $0.isMet }, "")
+    }
+    
+    private func updatePasswordRequirements() {
         let password = password.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        if password.isEmpty {
-            return (false, "Password is required")
-        }
-        if password.count < 8 {
-            return (false, "Password must be at least 8 characters")
-        }
-        if !password.contains(where: { $0.isNumber }) {
-            return (false, "Password must contain at least 1 number")
-        }
-        if !password.contains(where: { "!@#$%^&*()_+-=[]{}|;:,.<>?".contains($0) }) {
-            return (false, "Password must contain at least 1 special character")
-        }
-        if isSignUp && password != confirmPassword {
-            return (false, "Passwords do not match")
-        }
-        return (true, "")
+        // Update each requirement
+        passwordRequirements[0].isMet = password.count >= 8
+        passwordRequirements[1].isMet = password.contains(where: { $0.isNumber })
+        passwordRequirements[2].isMet = password.contains(where: { "!@#$%^&*()_+-=[]{}|;:,.<>?".contains($0) })
+        passwordRequirements[3].isMet = !isSignUp || password == confirmPassword
     }
     
     var body: some View {
@@ -68,6 +88,8 @@ struct LoginRegView: View {
                 // Content
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 30) {
+                        Spacer(minLength: 20)
+                        
                         // Logo and Title
                         VStack(spacing: 20) {
                             Image("logo_clear")
@@ -75,14 +97,10 @@ struct LoginRegView: View {
                                 .frame(width: 120, height: 120)
                                 .drawingGroup()
                                 .shadow(radius: 10)
-                                .opacity(isAnimating ? 1 : 0)
-                                .offset(y: isAnimating ? 0 : -20)
                             
                             Text(isSignUp ? "Create Account" : "Welcome Back")
                                 .font(.system(size: 32, weight: .regular))
                                 .foregroundColor(.primary)
-                                .opacity(isAnimating ? 1 : 0)
-                                .offset(y: isAnimating ? 0 : 20)
                         }
                    
                         
@@ -102,23 +120,39 @@ struct LoginRegView: View {
                             .onSubmit {
                                 focusedField = .password
                             }
-                            .disabled(isLoading)
+                            .disabled(false)
                             
                             // Password field
-                            CustomSecureField(
-                                text: $password,
-                                placeholder: "Password",
-                                showPassword: $showPassword,
-                                focusedField: _focusedField,
-                                field: .password,
-                                onSubmit: {
-                                    if isSignUp {
-                                        focusedField = .confirmPassword
-                                    } else {
-                                        handleSignIn()
+                            VStack(alignment: .leading, spacing: 8) {
+                                CustomSecureField(
+                                    text: $password,
+                                    placeholder: "Password",
+                                    showPassword: $showPassword,
+                                    focusedField: $focusedField,
+                                    field: .password,
+                                    onSubmit: {
+                                        if isSignUp {
+                                            focusedField = .confirmPassword
+                                        } else {
+                                            handleSignIn()
+                                        }
                                     }
+                                )
+                                .onChange(of: password) { _ in
+                                    updatePasswordRequirements()
                                 }
-                            )
+                                
+                                if isSignUp {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        ForEach(passwordRequirements) { requirement in
+                                            PasswordRequirementRow(requirement: requirement)
+                                        }
+                                    }
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 8)
+                                    .animation(.easeInOut, value: password)
+                                }
+                            }
                             
                             if isSignUp {
                                 // Confirm Password field
@@ -126,14 +160,17 @@ struct LoginRegView: View {
                                     text: $confirmPassword,
                                     placeholder: "Confirm Password",
                                     systemImage: "lock",
-                                    isSecure: !showConfirmPassword,
+                                    isSecure: showConfirmPassword,
                                     showSecureToggle: true,
                                     onToggleSecure: { showConfirmPassword.toggle() }
                                 )
                                 .focused($focusedField, equals: .confirmPassword)
                                 .submitLabel(.go)
                                 .onSubmit(handleSignUp)
-                                .disabled(isLoading)
+                                .disabled(false)
+                                .onChange(of: confirmPassword) { _ in
+                                    updatePasswordRequirements()
+                                }
                             } else {
                                 // Forgot Password Link (only show in sign-in mode)
                                 HStack {
@@ -143,7 +180,7 @@ struct LoginRegView: View {
                                             .foregroundColor(.color2.opacity(0.8))
                                             .font(.subheadline)
                                     }
-                                    .disabled(isLoading)
+                                    .disabled(false)
                                 }
                                 .padding(.top, -8)
                             }
@@ -167,10 +204,6 @@ struct LoginRegView: View {
                             // Sign In/Sign Up Button
                             Button(action: isSignUp ? handleSignUp : handleSignIn) {
                                 HStack(spacing: 10) {
-                                    if isLoading {
-                                        ProgressView()
-                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    }
                                     Text(isSignUp ? "Sign Up" : "Sign In")
                                         .foregroundColor(.white)
                                         .font(.headline)
@@ -185,9 +218,8 @@ struct LoginRegView: View {
                                     )
                                 )
                                 .cornerRadius(27)
-                                .shadow(color: .blue.opacity(0.3), radius: 10, x: 0, y: 5)
                             }
-                            .disabled(isLoading)
+                            .disabled(false)
                             
                             // Toggle between Sign Up and Sign In
                             Button(action: {
@@ -216,19 +248,21 @@ struct LoginRegView: View {
                                     }
                                 }
                             }
-                            .disabled(isLoading)
+                            .disabled(false)
                         }
                         .padding(.horizontal, 20)
                     }
                     .padding(.horizontal)
                 }
-                .scrollDismissesKeyboard(.interactively)
+                .scrollDismissesKeyboard(.immediately)
+                .ignoresSafeArea(.keyboard, edges: .bottom)
             }
+            .toast(isPresented: $showToast, message: toastMessage)
+            .navigationBarHidden(true)
         }
   
         .onAppear {
             withAnimation(.easeOut(duration: 0.8)) {
-                isAnimating = true
             }
         }
         .onChange(of: authModel.isAuthenticated) {
@@ -238,13 +272,9 @@ struct LoginRegView: View {
         }
         .onChange(of: authModel.errorMessage) {
             if !authModel.errorMessage.isEmpty {
-                isLoading = false
             }
         }
         .overlay(content: {
-            if isLoading {
-                LoadingOverlay()
-            }
         })
         .alert("Password Reset", isPresented: $showResetAlert) {
             Button("OK", role: .cancel) {}
@@ -253,8 +283,6 @@ struct LoginRegView: View {
         }
         .alert("Email Verification", isPresented: $authModel.showVerificationAlert) {
             Button("OK") {
-                isLoading = false
-
                 email = ""
                 password = ""
                 confirmPassword = ""
@@ -276,27 +304,46 @@ struct LoginRegView: View {
     
     private func handleSignIn() {
         let emailTrimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        let passwordTrimmed = password.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        // Validate email
-        if emailTrimmed.isEmpty {
-            errorMessage = "Email is required"
+        guard !emailTrimmed.isEmpty else {
+            toastMessage = "Please enter your email"
+            withAnimation {
+                showToast = true
+            }
             return
         }
         
-        // Validate password
-        let validation = passwordValidation
-        if !validation.isValid {
-            errorMessage = validation.message
+        guard !passwordTrimmed.isEmpty else {
+            toastMessage = "Please enter your password"
+            withAnimation {
+                showToast = true
+            }
             return
         }
-        
-        isLoading = true
-        errorMessage = ""
         
         Task {
             do {
-                authModel.signIn(email: email, password: password)
-                isLoading = false
+                try await authModel.signIn(email: emailTrimmed, password: passwordTrimmed)
+            } catch {
+                if let err = error as NSError? {
+                    // Check for specific Firebase error codes
+                    switch err.code {
+                    case AuthErrorCode.wrongPassword.rawValue:
+                        toastMessage = "Incorrect email or password"
+                    case AuthErrorCode.invalidEmail.rawValue:
+                        toastMessage = "Please enter a valid email address"
+                    case AuthErrorCode.userNotFound.rawValue:
+                        toastMessage = "No account found with this email"
+                    default:
+                        toastMessage = "Unable to sign in. Please try again."
+                    }
+                } else {
+                    toastMessage = "Unable to sign in. Please try again."
+                }
+                withAnimation {
+                    showToast = true
+                }
             }
         }
     }
@@ -317,8 +364,6 @@ struct LoginRegView: View {
             return
         }
         
-        isLoading = true
-        errorMessage = ""
         authModel.signUp(email: email, password: password)
     }
     
@@ -329,20 +374,17 @@ struct LoginRegView: View {
             return
         }
         
-        isLoading = true
         Task {
             let (success, message) = await authModel.resetPassword(email: emailTrimmed)
             await MainActor.run {
                 resetSuccess = success
                 resetMessage = message
                 showResetAlert = true
-                isLoading = false
             }
         }
     }
     
     private func handleResendVerification() {
-        isLoading = true
         Task {
             let (success, message) = await authModel.resendVerificationEmail()
             await MainActor.run {
@@ -352,7 +394,6 @@ struct LoginRegView: View {
                     resetMessage = message
                 }
                 showResetAlert = true
-                isLoading = false
                 
                 // Clear form after resending verification
                 email = ""
@@ -376,80 +417,87 @@ struct CustomTextField: View {
     let text: Binding<String>
     let placeholder: String
     let systemImage: String
-    let isSecure: Bool
+    var isSecure: Bool = false
     var showSecureToggle: Bool = false
-    var onToggleSecure: (() -> Void)? = nil
-    
+    var onToggleSecure: (() -> Void)?
+
     var body: some View {
-        HStack {
+        HStack(spacing: 12) {
             Image(systemName: systemImage)
-                .foregroundColor(.secondary)
-            
-            ZStack(alignment: .trailing) {
-                if isSecure {
-                    SecureField(placeholder, text: text)
-                } else {
-                    TextField(placeholder, text: text)
-                }
-                
-                if showSecureToggle {
-                    Button(action: { onToggleSecure?() }) {
-                        Image(systemName: isSecure ? "eye.fill" : "eye.slash.fill")
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.trailing, 8)
+                .foregroundColor(.gray)
+
+            if isSecure {
+                SecureField(placeholder, text: text)
+                    .textContentType(.none)
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+            } else {
+                TextField(placeholder, text: text)
+                    .textContentType(.none)
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+            }
+
+            if showSecureToggle {
+                Button(action: {
+                    onToggleSecure?()
+                }) {
+                    Image(systemName: isSecure ? "eye.slash" : "eye")
+                        .foregroundColor(.gray)
                 }
             }
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.white)
-                .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.gray.opacity(0.1))
         )
-        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 }
 
 struct CustomSecureField: View {
     let text: Binding<String>
     let placeholder: String
-    @Binding var showPassword: Bool
-    @FocusState var focusedField: Field?
+    let showPassword: Binding<Bool>
+    let focusedField: FocusState<Field?>.Binding
     let field: Field
     let onSubmit: () -> Void
-    
+
     var body: some View {
-        HStack {
+        HStack(spacing: 12) {
             Image(systemName: "lock")
-                .foregroundColor(.secondary)
-            
-            ZStack(alignment: .trailing) {
-                if showPassword {
+                .foregroundColor(.gray)
+
+            Group {
+                if showPassword.wrappedValue {
                     TextField(placeholder, text: text)
-                        .submitLabel(.next)
-                        .onSubmit(onSubmit)
+                        .textContentType(.none)
+                        .focused(focusedField, equals: field)
                 } else {
                     SecureField(placeholder, text: text)
-                        .submitLabel(.next)
-                        .onSubmit(onSubmit)
+                        .textContentType(.none)
+                        .focused(focusedField, equals: field)
                 }
-                
-                Button(action: { showPassword.toggle() }) {
-                    Image(systemName: showPassword ? "eye.fill" : "eye.slash.fill")
-                        .foregroundColor(.secondary)
-                }
-                .padding(.trailing, 8)
+            }
+            .submitLabel(.next)
+            .onSubmit(onSubmit)
+            .autocapitalization(.none)
+            .disableAutocorrection(true)
+
+            Button(action: {
+                showPassword.wrappedValue.toggle()
+            }) {
+                Image(systemName: showPassword.wrappedValue ? "eye.slash" : "eye")
+                    .foregroundColor(.gray)
             }
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.white)
-                .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.gray.opacity(0.1))
         )
-        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
-        .focused($focusedField, equals: field)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 }
 

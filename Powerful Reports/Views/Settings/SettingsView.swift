@@ -79,14 +79,10 @@ struct SettingsView: View {
                     ], spacing: 5) {
                      
                         
-                        
                         SectionHeaderView(title: "Account")
-                            .font(.headline)
-                            .foregroundColor(.color2)
-                            .padding(.horizontal)
                             .padding(.top)
-                            .gridCellColumns(2)
                         Spacer()
+                   
                         
                         
                         

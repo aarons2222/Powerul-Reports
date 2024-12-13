@@ -6,12 +6,15 @@
 //
 
 import SwiftUI
+import FirebaseAuth
 
 struct AccountView: View {
     @EnvironmentObject var authModel: AuthenticationViewModel
+    @State var subscriptionModel = SubscriptionStatusModel()
     @State private var showSignOutAlert = false
     @State private var showDeleteAccountAlert = false
     @State private var showDeleteConfirmation = false
+    @State private var showEmailPasswordSettings = false
     
     
     
@@ -53,6 +56,28 @@ struct AccountView: View {
         return "This will permanently delete your account and all associated data. This action CANNOT be undone. Are you absolutely sure?"
     }
     
+    // Helper functions for sign-in method display
+    private func getSignInMethodIcon(for user: User) -> String {
+        if user.providerData.contains(where: { $0.providerID == "apple.com" }) {
+            return "applelogo"
+        } else if user.providerData.contains(where: { $0.providerID == "google.com" }) {
+            return "g.circle.fill"
+        } else if user.providerData.contains(where: { $0.providerID == "password" }) {
+            return "envelope.fill"
+        }
+        return "person.fill"
+    }
+    
+    private func getSignInMethodText(for user: User) -> String {
+        if user.providerData.contains(where: { $0.providerID == "apple.com" }) {
+            return "Signed in with Apple"
+        } else if user.providerData.contains(where: { $0.providerID == "google.com" }) {
+            return "Signed in with Google"
+        } else if user.providerData.contains(where: { $0.providerID == "password" }) {
+            return "Signed in with Email"
+        }
+        return "Unknown sign-in method"
+    }
     
     var body: some View {
         
@@ -96,6 +121,15 @@ struct AccountView: View {
                                     .font(.footnote)
                                     .foregroundColor(.secondary)
                             }
+                            
+                            // Sign-in method
+                            HStack(spacing: 4) {
+                                Image(systemName: getSignInMethodIcon(for: user))
+                                    .foregroundColor(.secondary)
+                                Text(getSignInMethodText(for: user))
+                                    .font(.footnote)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                         
                         Spacer()
@@ -106,6 +140,29 @@ struct AccountView: View {
                     .cardBackground()
                 }
                 
+             
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(subscriptionModel.subscriptionStatus.description)
+                            .font(.subheadline)
+                            .foregroundColor(.color4)
+                        
+                        if case let .monthly(expiryDate) = subscriptionModel.subscriptionStatus,
+                           let date = expiryDate {
+                            Text("Next billing date: \(date, style: .date)")
+                                .font(.footnote)
+                                .foregroundColor(.secondary)
+                        } else if case let .annual(expiryDate) = subscriptionModel.subscriptionStatus,
+                                  let date = expiryDate {
+                            Text("Next billing date: \(date, style: .date)")
+                                .font(.footnote)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+                .cardBackground()
                 
                 LazyVGrid(columns: [
                     GridItem(.flexible(), spacing: 20),
@@ -117,15 +174,20 @@ struct AccountView: View {
                     
                     
                     Button {
-                        showSignOutAlert = true
-                        
-                        
-                        
+                        if let user = authModel.user,
+                           user.providerData.contains(where: { $0.providerID == "password" }) {
+                            showEmailPasswordSettings = true
+                        } else {
+                            // Show info alert about Apple ID management
+                            alertTitle = "Apple ID Sign In"
+                            alertMessage = "Your account uses Sign in with Apple. To manage your password, please visit Apple ID settings or appleid.apple.com"
+                            showAlert = true
+                        }
                     } label: {
                         InfoCardView(
                             icon: "lock",
                             iconColor: .color2,
-                            title: "Change Password",
+                            title: authModel.user?.providerData.contains(where: { $0.providerID == "password" }) == true ? "Email & Password" : "Password Info",
                             marquee: false)
                     }
                  
@@ -235,6 +297,9 @@ struct AccountView: View {
                             .tint(.white)
                     }
             }
+        }
+        .sheet(isPresented: $showEmailPasswordSettings) {
+            EmailPasswordSettingsView()
         }
 
     }

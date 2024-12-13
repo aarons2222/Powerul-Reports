@@ -105,10 +105,10 @@ struct ExpandingCardView: View {
     let isExpanded: Bool
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
         
             Text(item.title.first ?? "")
-                .font(.title)
+                .font(.title2)
                 .fontWeight(.regular)
                 .padding(.top, isExpanded ? 10 : 0)
                 .padding(.horizontal)
@@ -117,7 +117,7 @@ struct ExpandingCardView: View {
             
             
             Text(item.title.last ?? "")
-                .font(.callout)
+                .font(.body)
                 .foregroundColor(.white)
                 .padding(.horizontal)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -128,9 +128,8 @@ struct ExpandingCardView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(minHeight: 100)
         .background(backgroundView)
-        .cornerRadius(20)
+        .cornerRadius(14)
         .shadow(color: item.color.opacity(0.4), radius: 10, x: 0, y: 5)
         .overlay(
             RoundedRectangle(cornerRadius: 20)
