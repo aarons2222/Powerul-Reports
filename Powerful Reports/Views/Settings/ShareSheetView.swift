@@ -10,7 +10,7 @@ import MessageUI
 
 
 struct ShareSheetView: View {
-    let appStoreUrl = URL(string: "https://apps.apple.com/your-app-url")!
+    let appStoreUrl = URL(string: "https://apps.apple.com/gb/app/powerful-reports/id6738889825")!
     @Environment(\.dismiss) private var dismiss
     @State private var showingShareSheet = false
     @State private var showingMessageCompose = false
@@ -57,15 +57,19 @@ struct ShareSheetView: View {
                     }
                 }
                 
-                ShareButton(icon: "bubble.left.fill", text: "Messenger", color: .color2.opacity(0.8)) {
+                ShareButton(icon: "messenger", text: "Messenger", color: .color2.opacity(0.8)) {
                     openURL("fb-messenger://")
                 }
                 
-                ShareButton(icon: "camera.fill", text: "Instagram", color: .color2.opacity(0.6)) {
+                ShareButton(icon: "whatsapp", text: "Whatsapp", color: .color2.opacity(0.8)) {
+                    openURL("whatsapp://")
+                }
+                
+                ShareButton(icon: "instagram", text: "Instagram", color: .color2.opacity(0.6)) {
                     openURL("instagram://")
                 }
                 
-                ShareButton(icon: "f.square.fill", text: "Facebook", color: .color2.opacity(0.4)) {
+                ShareButton(icon: "facebook", text: "Facebook", color: .color2.opacity(0.4)) {
                     openURL("fb://")
                 }
                 
@@ -128,8 +132,14 @@ struct ShareButton: View {
     var body: some View {
         Button(action: action) {
             HStack {
-                Image(systemName: icon)
-                    .foregroundStyle(.white)
+                Image(icon)
+                    .resizable()
+                    .renderingMode(.template)
+                    .foregroundColor(.white)
+                    .frame(width: 30, height: 30)
+               
+                Spacer()
+                
                 Text(text)
                     .fontWeight(.regular)
                     .foregroundStyle(.white)

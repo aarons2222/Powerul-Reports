@@ -21,6 +21,30 @@ struct AccountView: View {
     @State private var alertMessage = ""
   
     
+    private func formatMemberDuration(from date: Date) -> String {
+        let calendar = Calendar.current
+        let now = Date()
+        let components = calendar.dateComponents([.year, .day, .hour], from: date, to: now)
+        
+        if let years = components.year, years > 0 {
+            if let days = components.day, days > 0 {
+                return "\(years) Years \(days) Days"
+            }
+            return "\(years) Years"
+        }
+        
+        if let days = components.day, days > 0 {
+            return "\(days) Days"
+        }
+        
+        if let hours = components.hour {
+            return "\(hours) Hours"
+        }
+        
+        return "Just joined"
+    }
+    
+    
     var deleteAccountMessage: String {
         if let user = authModel.user,
            user.providerData.first(where: { $0.providerID == "apple.com" }) != nil {
@@ -42,20 +66,127 @@ struct AccountView: View {
             
             
             
+            
             // Bottom Actions
-            VStack(spacing: 16) {
-                GlobalButton(title: "Sign Out") {
-                    showSignOutAlert = true
+            VStack(spacing: 25) {
+                
+                
+                if let user = authModel.user {
+                    HStack(spacing: 24) {
+                        // Avatar
+                        Circle()
+                            .fill(Color.color2.opacity(0.15))
+                            .frame(width: 58, height: 58)
+                            .overlay(
+                                Text((user.email?.prefix(1).uppercased() ?? "?"))
+                                    .font(.title2.weight(.semibold))
+                                    .foregroundColor(.color2)
+                            )
+                            .shadow(color: .color2.opacity(0.1), radius: 5, x: 0, y: 2)
+                        
+                        // User Info
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(user.email ?? "No email")
+                                .font(.subheadline)
+                                .fontWeight(.regular)
+                                .foregroundColor(.color4)
+                            
+                            if let creationDate = user.metadata.creationDate {
+                                Text("Member for \(formatMemberDuration(from: creationDate))")
+                                    .font(.footnote)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    .cardBackground()
                 }
                 
-                GlobalButton(title: "Delete Account", backgroundColor: .color8) {
-                    showDeleteAccountAlert = true
+                
+                LazyVGrid(columns: [
+                    GridItem(.flexible(), spacing: 20),
+                    GridItem(.flexible(), spacing: 20)
+                ], spacing: 5) {
+                    
+                    
+                    
+                    
+                    
+                    Button {
+                        showSignOutAlert = true
+                        
+                        
+                        
+                    } label: {
+                        InfoCardView(
+                            icon: "lock",
+                            iconColor: .color2,
+                            title: "Change Password",
+                            marquee: false)
+                    }
+                 
+                    
+                    Spacer()
+                    Spacer()
+                        .frame(height: 20)
+                           .gridCellColumns(2)
+                    Spacer()
+             
+                    
+           
+                    
+                    Button {
+                        showSignOutAlert = true
+                        
+                        
+                        
+                    } label: {
+                        InfoCardView(
+                            icon: "rectangle.portrait.and.arrow.right",
+                            iconColor: .color2,
+                            title: "Sign Out",
+                            marquee: false)
+                    }
+                 
+                    
+                    
+                    Button {
+                        showDeleteAccountAlert = true
+                        
+                   
+                        
+                    } label: {
+                        InfoCardView(
+                            icon:  "person.slash",
+                            iconColor: .color8,
+                            title: "Delete Account",
+                            marquee: false)
+                            .foregroundStyle(.color8)
+                    }
+                 
+                    
+                    
+                    
+                    
                 }
                 
+                Spacer()
+//                GlobalButton(title: "Sign Out") {
+//                    showSignOutAlert = true
+//                }
+//                
+//                GlobalButton(title: "Delete Account", backgroundColor: .color8) {
+//                    showDeleteAccountAlert = true
+//                }
+//                
                 
              
             }
-            .padding(.horizontal)
+            .padding()
         }
         .padding(.bottom, 30)
         
