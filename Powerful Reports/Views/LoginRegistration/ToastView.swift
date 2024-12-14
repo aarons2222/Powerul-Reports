@@ -8,19 +8,19 @@ struct ToastView: View {
         HStack(spacing: 12) {
             Image(systemName: isError ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
                 .foregroundColor(isError ? .white : .white)
+                .font(.headline)
             
             Text(message)
-                .font(.subheadline)
+                .font(.callout)
                 .foregroundColor(.white)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(
-            RoundedRectangle(cornerRadius: 25)
+            Capsule()
                 .fill(isError ? Color.color8 : Color.color2.opacity(0.9))
                 .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
         )
-        .transition(.move(edge: .top).combined(with: .opacity))
     }
 }
 
@@ -29,26 +29,35 @@ struct ToastModifier: ViewModifier {
     let message: String
     let isError: Bool
     let duration: TimeInterval
+    @State private var offset: CGFloat = -150
     
     func body(content: Content) -> some View {
-        ZStack {
+        ZStack(alignment: .top) {
             content
             
             if isPresented {
-                VStack {
-                    ToastView(message: message, isError: isError)
-                        .padding(.top, 40)
-                    Spacer()
-                }
-                .onAppear {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
-                        withAnimation(.easeInOut) {
-                            isPresented = false
+                ToastView(message: message, isError: isError)
+                    .padding(.horizontal)
+                    .padding(.vertical, 0)
+                    .offset(y: offset)
+                    .onAppear {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                            offset = 0
+                        }
+                        
+                        DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                                offset = -150
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                isPresented = false
+                                offset = -150  // Reset for next time
+                            }
                         }
                     }
-                }
             }
         }
+        .padding(0)
     }
 }
 

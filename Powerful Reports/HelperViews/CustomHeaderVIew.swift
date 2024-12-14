@@ -9,6 +9,7 @@ import SwiftUI
 
 struct CustomHeaderVIew: View {
     @Environment(\.presentationMode) var presentationMode
+    
       var title: String
       var showFilterButton: Bool?
       @Binding var showFilters: Bool

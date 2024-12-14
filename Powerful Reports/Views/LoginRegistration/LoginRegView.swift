@@ -36,6 +36,8 @@ struct PasswordRequirementRow: View {
 }
 
 struct LoginRegView: View {
+    @Environment(\.presentationMode) var presentationMode
+
     @EnvironmentObject var authModel: AuthenticationViewModel
     @State private var email = ""
     @State private var password = ""
@@ -48,6 +50,7 @@ struct LoginRegView: View {
     @State private var resetMessage = ""
     @State private var resetSuccess = false
     @FocusState private var focusedField: Field?
+    @State private var keyboardHeight: CGFloat = 0
     
     @State private var errorMessage: String = ""
     @State private var showToast: Bool = false
@@ -71,198 +74,205 @@ struct LoginRegView: View {
         passwordRequirements[0].isMet = password.count >= 8
         passwordRequirements[1].isMet = password.contains(where: { $0.isNumber })
         passwordRequirements[2].isMet = password.contains(where: { "!@#$%^&*()_+-=[]{}|;:,.<>?".contains($0) })
-        passwordRequirements[3].isMet = !isSignUp || password == confirmPassword
+        passwordRequirements[3].isMet = !isSignUp || password == confirmPassword && password.count >= 8 
     }
     
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                // Background gradient
-                LinearGradient(
-                    gradient: Gradient(colors: [.color3.opacity(0.3), .color5.opacity(0.3)]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
-                
-                // Content
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 30) {
-                        Spacer(minLength: 20)
-                        
-                        // Logo and Title
-                        VStack(spacing: 20) {
-                            Image("logo_clear")
-                                .resizable()
-                                .frame(width: 120, height: 120)
-                                .drawingGroup()
-                                .shadow(radius: 10)
-                            
-                            Text(isSignUp ? "Create Account" : "Welcome Back")
-                                .font(.system(size: 32, weight: .regular))
-                                .foregroundColor(.primary)
+        ZStack {
+            // Background gradient
+            LinearGradient(
+                gradient: Gradient(colors: [.color3.opacity(0.3), .color5.opacity(0.3)]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 30) {
+                    HStack {
+                        Button {
+                            presentationMode.wrappedValue.dismiss()
+                        } label: {
+                            Image(systemName: "chevron.backward.circle.fill")
+                                .font(.title)
+                                .fontWeight(.regular)
+                                .foregroundStyle(.white.opacity(0.6))
+                                .padding(.leading)
                         }
-                   
+                        Spacer()
+                    }
+                    
+                    Spacer(minLength: 40)
+                    
+                    // Logo and Title
+                    VStack(spacing: 20) {
+                        Image("logo_clear")
+                            .resizable()
+                            .frame(width: 120, height: 120)
+                            .drawingGroup()
+                            .shadow(radius: 10)
                         
-                        // Form fields
-                        VStack(spacing: 20) {
-                            // Email field
-                            CustomTextField(
-                                text: $email,
-                                placeholder: "Email",
-                                systemImage: "envelope",
-                                isSecure: false
+                        Text(isSignUp ? "Create Account" : "Welcome Back")
+                            .font(.system(size: 32, weight: .regular))
+                            .foregroundColor(.primary)
+                    }
+                    
+                    // Form fields
+                    VStack(spacing: 20) {
+                        // Email field
+                        CustomTextField(
+                            text: $email,
+                            placeholder: "Email",
+                            systemImage: "envelope",
+                            isSecure: false
+                        )
+                        .focused($focusedField, equals: .email)
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.emailAddress)
+                        .submitLabel(.next)
+                        .onSubmit {
+                            focusedField = .password
+                        }
+                        .disabled(false)
+                        
+                        // Password field
+                        VStack(alignment: .leading, spacing: 8) {
+                            CustomSecureField(
+                                text: $password,
+                                placeholder: "Password",
+                                showPassword: $showPassword,
+                                focusedField: $focusedField,
+                                field: .password,
+                                onSubmit: {
+                                    if isSignUp {
+                                        focusedField = .confirmPassword
+                                    } else {
+                                        handleSignIn()
+                                    }
+                                }
                             )
-                            .focused($focusedField, equals: .email)
-                            .textInputAutocapitalization(.never)
-                            .keyboardType(.emailAddress)
-                            .submitLabel(.next)
-                            .onSubmit {
-                                focusedField = .password
-                            }
-                            .disabled(false)
-                            
-                            // Password field
-                            VStack(alignment: .leading, spacing: 8) {
-                                CustomSecureField(
-                                    text: $password,
-                                    placeholder: "Password",
-                                    showPassword: $showPassword,
-                                    focusedField: $focusedField,
-                                    field: .password,
-                                    onSubmit: {
-                                        if isSignUp {
-                                            focusedField = .confirmPassword
-                                        } else {
-                                            handleSignIn()
-                                        }
-                                    }
-                                )
-                                .onChange(of: password) { _ in
-                                    updatePasswordRequirements()
-                                }
-                                
-                                if isSignUp {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        ForEach(passwordRequirements) { requirement in
-                                            PasswordRequirementRow(requirement: requirement)
-                                        }
-                                    }
-                                    .padding(.horizontal, 4)
-                                    .padding(.vertical, 8)
-                                    .animation(.easeInOut, value: password)
-                                }
+                            .onChange(of: password) { _ in
+                                updatePasswordRequirements()
                             }
                             
                             if isSignUp {
-                                // Confirm Password field
-                                CustomTextField(
-                                    text: $confirmPassword,
-                                    placeholder: "Confirm Password",
-                                    systemImage: "lock",
-                                    isSecure: showConfirmPassword,
-                                    showSecureToggle: true,
-                                    onToggleSecure: { showConfirmPassword.toggle() }
-                                )
-                                .focused($focusedField, equals: .confirmPassword)
-                                .submitLabel(.go)
-                                .onSubmit(handleSignUp)
-                                .disabled(false)
-                                .onChange(of: confirmPassword) { _ in
-                                    updatePasswordRequirements()
-                                }
-                            } else {
-                                // Forgot Password Link (only show in sign-in mode)
-                                HStack {
-                                    Spacer()
-                                    Button(action: { showPasswordReset = true }) {
-                                        Text("Forgot Password?")
-                                            .foregroundColor(.color2.opacity(0.8))
-                                            .font(.subheadline)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    ForEach(passwordRequirements) { requirement in
+                                        PasswordRequirementRow(requirement: requirement)
                                     }
-                                    .disabled(false)
                                 }
-                                .padding(.top, -8)
-                            }
-                            
-                            // Error message
-                            if !authModel.errorMessage.isEmpty {
-                                Text(authModel.errorMessage)
-                                    .foregroundColor(.red)
-                                    .font(.caption)
-                                    .padding(.horizontal)
-                                    .transition(.opacity)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 8)
+                                .animation(.easeInOut, value: password)
                             }
                         }
-                        .padding(.horizontal, 20)
                         
-                        Spacer()
-                        
-                        VStack(spacing: 16) {
-                 
-                            
-                            // Sign In/Sign Up Button
-                            Button(action: isSignUp ? handleSignUp : handleSignIn) {
-                                HStack(spacing: 10) {
-                                    Text(isSignUp ? "Sign Up" : "Sign In")
-                                        .foregroundColor(.white)
-                                        .font(.headline)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 45)
-                                .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [.color2, .color2]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .cornerRadius(27)
-                            }
+                        if isSignUp {
+                            // Confirm Password field
+                            CustomTextField(
+                                text: $confirmPassword,
+                                placeholder: "Confirm Password",
+                                systemImage: "lock",
+                                isSecure: showConfirmPassword,
+                                showSecureToggle: true,
+                                onToggleSecure: { showConfirmPassword.toggle() }
+                            )
+                            .focused($focusedField, equals: .confirmPassword)
+                            .submitLabel(.go)
+                            .onSubmit(handleSignUp)
                             .disabled(false)
-                            
-                            // Toggle between Sign Up and Sign In
-                            Button(action: {
-                                withAnimation {
-                                    isSignUp.toggle()
-                                    email = ""
-                                    password = ""
-                                    confirmPassword = ""
-                                    errorMessage = ""
-                                    focusedField = nil
-                                }
-                            }) {
-                                HStack(spacing: 5) {
-                                    Text(isSignUp ? "Already have an account?" : "Don't have an account?")
-                                        .foregroundColor(.primary.opacity(0.8))
+                            .onChange(of: confirmPassword) { _ in
+                                updatePasswordRequirements()
+                            }
+                        } else {
+                            // Forgot Password Link (only show in sign-in mode)
+                            HStack {
+                                Spacer()
+                                Button(action: { showPasswordReset = true }) {
+                                    Text("Forgot Password?")
+                                        .foregroundColor(.color2.opacity(0.8))
                                         .font(.subheadline)
-                                    
-                                    if !isSignUp {
-                                        Text("Sign Up")
-                                            .foregroundColor(.color2.opacity(0.8))
-                                            .font(.subheadline)
-                                    } else {
-                                        Text("Sign In")
-                                            .foregroundColor(.color2.opacity(0.8))
-                                            .font(.subheadline)
-                                    }
+                                }
+                                .disabled(false)
+                            }
+                            .padding(.top, -8)
+                        }
+                        
+                        // Error message
+                        if !authModel.errorMessage.isEmpty {
+                            Text(authModel.errorMessage)
+                                .foregroundColor(.red)
+                                .font(.caption)
+                                .padding(.horizontal)
+                                .transition(.opacity)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    Spacer()
+                    
+                    VStack(spacing: 16) {
+                     
+                        
+                        GlobalButton(title: isSignUp ? "Sign Up" : "Sign In"){
+                            if (isSignUp){
+                                handleSignUp()
+                            }else{
+                                handleSignIn()
+                            }
+                        }
+                       
+                        
+                        
+                        // Toggle between Sign Up and Sign In
+                        Button(action: {
+                            withAnimation {
+                                isSignUp.toggle()
+                                email = ""
+                                password = ""
+                                confirmPassword = ""
+                                errorMessage = ""
+                                focusedField = nil
+                            }
+                        }) {
+                            HStack(spacing: 5) {
+                                Text(isSignUp ? "Already have an account?" : "Don't have an account?")
+                                    .foregroundColor(.primary.opacity(0.8))
+                                    .font(.subheadline)
+                                
+                                if !isSignUp {
+                                    Text("Sign Up")
+                                        .foregroundColor(.color2.opacity(0.8))
+                                        .font(.subheadline)
+                                } else {
+                                    Text("Sign In")
+                                        .foregroundColor(.color2.opacity(0.8))
+                                        .font(.subheadline)
                                 }
                             }
-                            .disabled(false)
                         }
-                        .padding(.horizontal, 20)
+                        .disabled(false)
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, 20)
                 }
-                .scrollDismissesKeyboard(.immediately)
-                .ignoresSafeArea(.keyboard, edges: .bottom)
+                .padding(.horizontal)
+                .padding(.bottom, keyboardHeight + 20)
             }
-            .toast(isPresented: $showToast, message: toastMessage)
-            .navigationBarHidden(true)
+            .scrollDismissesKeyboard(.immediately)
         }
-  
+        .offset(y: -keyboardHeight/2)
+        .animation(.easeOut(duration: 0.16), value: keyboardHeight)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .navigationBarHidden(true)
+        .toast(isPresented: $showToast, message: toastMessage)
         .onAppear {
-            withAnimation(.easeOut(duration: 0.8)) {
+            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
+                let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect ?? .zero
+                keyboardHeight = keyboardFrame.height
+            }
+            
+            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
+                keyboardHeight = 0
             }
         }
         .onChange(of: authModel.isAuthenticated) {
@@ -270,12 +280,6 @@ struct LoginRegView: View {
                 focusedField = nil
             }
         }
-        .onChange(of: authModel.errorMessage) {
-            if !authModel.errorMessage.isEmpty {
-            }
-        }
-        .overlay(content: {
-        })
         .alert("Password Reset", isPresented: $showResetAlert) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -424,7 +428,7 @@ struct CustomTextField: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: systemImage)
-                .foregroundColor(.gray)
+                .foregroundColor(.color1)
 
             if isSecure {
                 SecureField(placeholder, text: text)
@@ -449,8 +453,9 @@ struct CustomTextField: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 8)
+           Capsule()
                 .fill(Color.gray.opacity(0.1))
+                .stroke(.color2, lineWidth: 2)
         )
         .ignoresSafeArea(.keyboard, edges: .bottom)
     }
@@ -467,7 +472,8 @@ struct CustomSecureField: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "lock")
-                .foregroundColor(.gray)
+                .foregroundColor(.color1)
+            
 
             Group {
                 if showPassword.wrappedValue {
@@ -494,8 +500,9 @@ struct CustomSecureField: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 8)
+           Capsule()
                 .fill(Color.gray.opacity(0.1))
+                .stroke(.color2, lineWidth: 2)
         )
         .ignoresSafeArea(.keyboard, edges: .bottom)
     }

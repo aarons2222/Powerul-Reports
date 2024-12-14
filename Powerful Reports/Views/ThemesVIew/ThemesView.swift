@@ -11,11 +11,14 @@ struct ProcessedThemeGroup: Identifiable {
     let id = UUID()
     let title: [String]
     let themes: [String]
+    let percentage: Double
 }
 
 struct ThemesView: View {
     private let themeGroups: [ProcessedThemeGroup]
-    @State private var expandedId: Int? = nil
+    @State private var expandedId: UUID? = nil
+    @State private var selectedTheme: String? = nil
+    @State private var animateCards = false
     
     init(themes: [(String, Double)]) {
         // Define ranges with min and max values (exclusive)
@@ -32,133 +35,156 @@ struct ThemesView: View {
             let (min, max) = range
             
             let themesInRange = themes.filter { theme in
-                theme.1 >= min && theme.1 < max  // Use < instead of <= for exclusive upper bound
+                theme.1 >= min && theme.1 < max
             }.map { $0.0 }
             
             guard !themesInRange.isEmpty else { return nil }
             
             let title: [String]
+            let percentage: Double
             switch max {
             case 100.1:
                 title = ["Universal", "Found in over 75% of reports"]
+                percentage = 100
             case 75.0:
                 title = ["Very Common", "Found in 50-75% of reports"]
+                percentage = 75
             case 50.0:
                 title = ["Frequent", "Found in 25-50% of reports"]
+                percentage = 50
             case 25.0:
                 title = ["Moderate", "Found in 5-25% of reports"]
+                percentage = 25
             case 5.0:
                 title = ["Uncommon", "Found in 1-5% of reports"]
+                percentage = 5
             case 1.0:
                 title = ["Rare", "Found in less than 1% of reports"]
+                percentage = 1
             default:
                 title = ["Other Themes", ""]
+                percentage = 0
             }
             
-            return ProcessedThemeGroup(title: title, themes: themesInRange.sorted())
+            return ProcessedThemeGroup(title: title, themes: themesInRange.sorted(), percentage: percentage)
         }
     }
     
     var body: some View {
         VStack(spacing: 0) {
             CustomHeaderVIew(title: "All Themes")
+            
+            // Themes List
             ScrollView {
                 LazyVStack(spacing: 16) {
                     ForEach(Array(themeGroups.enumerated().reversed()), id: \.1.id) { index, group in
-                        ExpandingCardView(
-                            item: CardItem(
-                                id: UUID(),
-                                title: group.title,
-                                items: group.themes,
-                                color: .color2.opacity(0.4 + 0.4 * (1 - Double(index) / Double(themeGroups.count)))
-
-                                    
-                            ),
-                            isExpanded: expandedId == index
+                        ThemeCardView(
+                            group: group,
+                            isExpanded: expandedId == group.id,
+                            selectedTheme: $selectedTheme,
+                            index: index,
+                            totalCount: themeGroups.count
                         )
-                        .animation(.easeInOut(duration: 0.3), value: expandedId)
                         .onTapGesture {
-                            expandedId = expandedId == index ? nil : index
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                expandedId = expandedId == group.id ? nil : group.id
+                            }
                         }
-                       
+                        .offset(x: animateCards ? 0 : -UIScreen.main.bounds.width)
+                        .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(Double(index) * 0.1), value: animateCards)
                     }
                 }
                 .padding()
-                .animation(.easeInOut(duration: 0.3), value: expandedId)
             }
-            Spacer()
         }
         .ignoresSafeArea()
         .navigationBarHidden(true)
+        .onAppear {
+            withAnimation {
+                animateCards = true
+            }
+        }
     }
 }
 
-struct CardItem: Identifiable {
-    let id: UUID
-    let title: [String]
-    let items: [String]
-    let color: Color
-}
-
-struct ExpandingCardView: View {
-    let item: CardItem
+struct ThemeCardView: View {
+    let group: ProcessedThemeGroup
     let isExpanded: Bool
+    @Binding var selectedTheme: String?
+    let index: Int
+    let totalCount: Int
+    @State private var showProgress = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-        
-            Text(item.title.first ?? "")
-                .font(.title2)
-                .fontWeight(.regular)
-                .padding(.top, isExpanded ? 10 : 0)
-                .padding(.horizontal)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            
-            
-            Text(item.title.last ?? "")
-                .font(.body)
-                .foregroundColor(.white)
-                .padding(.horizontal)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            
-            if isExpanded {
-                themesListView
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+        VStack(alignment: .leading, spacing: 12) {
+            // Header
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(group.title[0])
+                        .font(.headline)
+                        .fontWeight(.regular)
+                    Text(group.title[1])
+                        .font(.subheadline)
+                        .fontWeight(.regular)
+                        .foregroundColor(.gray)
+                }
+                
+                Spacer()
+                
+                Image(systemName: isExpanded ? "chevron.up.circle.fill" : "chevron.down.circle.fill")
+                    .font(.title2)
+                    .foregroundColor(.color1)
+                    .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                    .animation(.spring(), value: isExpanded)
             }
-        }
-        .frame(maxWidth: .infinity)
-        .background(backgroundView)
-        .cornerRadius(14)
-        .shadow(color: item.color.opacity(0.4), radius: 10, x: 0, y: 5)
-        .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(Color.white.opacity(0.5), lineWidth: 1)
-        )
-    }
-    
-    private var themesListView: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ForEach(item.items, id: \.self) { item in
-                HStack {
-                    Circle()
-                        .fill(.white.opacity(0.9))
-                        .frame(width: 6, height: 6)
-                    Text(item)
-                        .font(.body)
+            
+            // Progress Bar
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.2))
+                        .frame(height: 6)
+                        .cornerRadius(3)
+                    
+                    Rectangle()
+                        .fill(Color.color1)
+                        .frame(width: showProgress ? geometry.size.width * (group.percentage / 100) : 0, height: 6)
+                        .cornerRadius(3)
+                        .animation(.easeInOut(duration: 1.0).delay(0.3), value: showProgress)
                 }
             }
+            .frame(height: 6)
+            .onAppear {
+                showProgress = true
+            }
+            
+            if isExpanded {
+                // Themes Grid
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150))], spacing: 12) {
+                    ForEach(group.themes, id: \.self) { theme in
+                        Button(action: {
+                            withAnimation {
+                                selectedTheme = selectedTheme == theme ? nil : theme
+                            }
+                        }) {
+                            Text(theme)
+                                .font(.subheadline)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .cardBackground()
+                                .foregroundColor(selectedTheme == theme ? .color1 : .primary)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .transition(.scale.combined(with: .opacity))
+                    }
+                }
+                .padding(.top, 8)
+            }
         }
-        .padding(20)
-        .foregroundColor(.white.opacity(0.9))
-        .transition(.opacity.combined(with: .move(edge: .top)))
-    }
-    
-    private var backgroundView: some View {
-        LinearGradient(
-            gradient: Gradient(colors: [item.color.opacity(0.8), item.color]),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
+        .padding()
+        .cardBackground()
+        .scaleEffect(selectedTheme != nil && !group.themes.contains(selectedTheme!) ? 0.95 : 1.0)
+        .opacity(selectedTheme != nil && !group.themes.contains(selectedTheme!) ? 0.7 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedTheme)
     }
 }

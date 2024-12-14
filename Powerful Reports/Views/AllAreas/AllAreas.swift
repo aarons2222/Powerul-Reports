@@ -27,15 +27,11 @@ struct AreaInformation: Identifiable {
 struct AllAreas: View {
     let reports: [Report]
     
-    
     @Environment(\.dismiss) private var presentationMode
 
     
-    @State private var animateGradient: Bool = false
-    
     private let startColor: Color = .color2
     private let endColor: Color = .color1
-
     
     private var groupedAreaData: [String: [AreaInformation]] {
         let areaCounts = Dictionary(grouping: reports) { $0.localAuthority }
@@ -112,44 +108,38 @@ struct AllAreas: View {
                          
                          LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                              ForEach(Array(filteredAreaData.keys.sorted()), id: \.self) { letter in
-                                 Section {
-                                     
-                                     
-                                     ForEach(filteredAreaData[letter]?.sorted { $0.name < $1.name } ?? []) { item in
-
-                                         
-                                         
-                                         
-                                         
-                                         Button {
-                                            path.append(.areaProfile(item.name))
-                                         } label: {
+                                 if let areas = filteredAreaData[letter]?.sorted(by: { $0.name < $1.name }) {
+                                     Section {
+                                         ForEach(Array(zip(areas.indices, areas)), id: \.1.id) { index, item in
                                              
-                        
-                                             AllCard(title: item.name, count: item.count)
-
-                                             
-                                     
+                                             Button {
+                                                 path.append(.areaProfile(item.name))
+                                             } label: {
+                                                 
+                                                 AllCard(title: item.name, count: item.count)
+                                                  
+                                                  
+                                             }
+                                             .buttonStyle(PlainButtonStyle())
+                                             .padding(.bottom, 16)
                                          }
-                                         .buttonStyle(PlainButtonStyle())
-                                         .padding(.bottom, 16)
-                                     }
-                                 } header: {
-                                     ZStack {
-                                         Rectangle()
-                                             .fill(Color.white)
-                                             .ignoresSafeArea()
+                                     } header: {
+                                         ZStack {
+                                             Rectangle()
+                                                 .fill(Color.white)
+                                                 .ignoresSafeArea()
                                          
-                                         VStack {
-                                             Spacer()
-                                             Text(letter)
-                                                 .font(.title3)
-                                                 .padding(.horizontal, 12)
-                                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                                 .foregroundStyle(.color4)
-                                             Spacer()
+                                             VStack {
+                                                 Spacer()
+                                                 Text(letter)
+                                                     .font(.title3)
+                                                     .padding(.horizontal, 12)
+                                                     .frame(maxWidth: .infinity, alignment: .leading)
+                                                     .foregroundStyle(.color4)
+                                                 Spacer()
+                                             }
+                                             .frame(height: 40)
                                          }
-                                         .frame(height: 40)
                                      }
                                  }
                              }
@@ -169,7 +159,6 @@ struct AllAreas: View {
              .keyboardAdaptive()
              .ignoresSafeArea()
              .navigationBarHidden(true)
-
+             
      }
  }
-
