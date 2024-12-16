@@ -90,8 +90,7 @@ struct ThemesView: View {
                                 expandedId = expandedId == group.id ? nil : group.id
                             }
                         }
-                        .offset(x: animateCards ? 0 : -UIScreen.main.bounds.width)
-                        .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(Double(index) * 0.1), value: animateCards)
+                       
                     }
                 }
                 .padding()
@@ -131,7 +130,7 @@ struct ThemeCardView: View {
                 
                 Spacer()
                 
-                Image(systemName: isExpanded ? "chevron.up.circle.fill" : "chevron.down.circle.fill")
+                Image(systemName: "chevron.down.circle")
                     .font(.title2)
                     .foregroundColor(.color1)
                     .rotationEffect(.degrees(isExpanded ? 180 : 0))

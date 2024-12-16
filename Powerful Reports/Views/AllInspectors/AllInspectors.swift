@@ -142,6 +142,7 @@ struct AllInspectors: View {
                                        .frame(height: 40)
                                    }
                                }
+                               
                            }
                        }
                    }
