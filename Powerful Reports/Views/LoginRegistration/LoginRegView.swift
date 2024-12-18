@@ -115,7 +115,15 @@ struct LoginRegView: View {
                         Text(isSignUp ? "Create Account" : "Welcome Back")
                             .font(.system(size: 32, weight: .regular))
                             .foregroundColor(.primary)
+                            .animation(.easeInOut(duration: 0.3), value: isSignUp)
+                            .transition(.asymmetric(
+                                insertion: .opacity.combined(with: .scale(scale: 0.95)).animation(.easeInOut(duration: 0.3)),
+                                removal: .opacity.combined(with: .scale(scale: 1.05)).animation(.easeInOut(duration: 0.3))
+                            ))
+                            .id(isSignUp)
                     }
+                    .offset(y: isSignUp ? -40 : 0)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.9), value: isSignUp)
                     
                     // Form fields
                     VStack(spacing: 20) {
@@ -134,6 +142,8 @@ struct LoginRegView: View {
                             focusedField = .password
                         }
                         .disabled(false)
+                        .offset(y: isSignUp ? -30 : 0)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.9).delay(0.05), value: isSignUp)
                         
                         // Password field
                         VStack(alignment: .leading, spacing: 8) {
@@ -154,6 +164,8 @@ struct LoginRegView: View {
                             .onChange(of: password) { _ in
                                 updatePasswordRequirements()
                             }
+                            .offset(y: isSignUp ? -20 : 0)
+                            .animation(.spring(response: 0.5, dampingFraction: 0.9).delay(0.1), value: isSignUp)
                             
                             if isSignUp {
                                 VStack(alignment: .leading, spacing: 4) {
@@ -184,6 +196,8 @@ struct LoginRegView: View {
                             .onChange(of: confirmPassword) { _ in
                                 updatePasswordRequirements()
                             }
+                            .offset(y: isSignUp ? -10 : 0)
+                            .animation(.spring(response: 0.5, dampingFraction: 0.9).delay(0.15), value: isSignUp)
                         } else {
                             // Forgot Password Link (only show in sign-in mode)
                             HStack {
@@ -207,7 +221,7 @@ struct LoginRegView: View {
                                 .transition(.opacity)
                         }
                     }
-                    .padding(.horizontal, 20)
+               
                     
                     Spacer()
                     
@@ -221,7 +235,13 @@ struct LoginRegView: View {
                                 handleSignIn()
                             }
                         }
-                       
+                        .animation(.easeInOut(duration: 0.3), value: isSignUp)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .scale(scale: 0.95)).animation(.easeInOut(duration: 0.3)),
+                            removal: .opacity.combined(with: .scale(scale: 1.05)).animation(.easeInOut(duration: 0.3))
+                        ))
+                        .id(isSignUp) // Forces view replacement for transition
+                        
                         
                         
                         // Toggle between Sign Up and Sign In
@@ -253,9 +273,9 @@ struct LoginRegView: View {
                         }
                         .disabled(false)
                     }
-                    .padding(.horizontal, 20)
+        
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, 20)
                 .padding(.bottom, keyboardHeight + 20)
             }
             .scrollDismissesKeyboard(.immediately)
@@ -451,7 +471,8 @@ struct CustomTextField: View {
                 }
             }
         }
-        .padding()
+        .padding(.horizontal)
+        .padding(.vertical, 13)
         .background(
            Capsule()
                 .fill(Color.gray.opacity(0.1))
@@ -470,7 +491,7 @@ struct CustomSecureField: View {
     let onSubmit: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 14) {
             Image(systemName: "lock")
                 .foregroundColor(.color1)
             
@@ -498,7 +519,8 @@ struct CustomSecureField: View {
                     .foregroundColor(.gray)
             }
         }
-        .padding()
+        .padding(.horizontal)
+        .padding(.vertical, 13)
         .background(
            Capsule()
                 .fill(Color.gray.opacity(0.1))

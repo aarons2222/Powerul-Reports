@@ -49,21 +49,43 @@ struct InspectorProfileView: View {
                     }
                     .padding(.bottom)
                     
+                    // Theme Analytics Button
+                    if let analytics = viewModel.themeAnalytics {
+                        NavigationLink(destination:
+                                        InspectorThemeAnalyticsView(analytics: analytics, inspectorName: viewModel.profile.name)
+                                        
+                                        
+                           ) {
+                            CustomCardView("Themes",
+                                         navigationLink: AnyView(
+                                            Image(systemName: "chevron.right.circle")
+                                                .font(.title2)
+                                                .foregroundColor(.color1)
+                                         )) {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    HStack {
+                                        VStack(alignment: .leading) {
+                                            Text("\(Int(viewModel.recentReports.count))")
+                                                .font(.title)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.color1)
+                                            Text("View more details")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        
+                                        Spacer()
+                                    }
+                                }
+                            }
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .padding(.bottom)
+                    }
+                    
                     CustomCardView("Local Authorities Inspected") {
                         ForEach(viewModel.areas, id: \.self) { area in
                             LabeledContent(area, value: "\(viewModel.areaCount(area))")
-                        }
-                    }
-                    .padding(.bottom)
-                    
-                    CustomCardView("Popular themes") {
-                        ForEach(viewModel.themeStatistics.topThemes.prefix(10), id: \.topic) { themeFreq in
-                            HStack {
-                                Text(themeFreq.topic)
-                                Spacer()
-                                Text("\(themeFreq.count)")
-                                    .foregroundColor(.secondary)
-                            }
                         }
                     }
                     .padding(.bottom)
@@ -82,6 +104,7 @@ struct InspectorProfileView: View {
                         .frame(height: 200)
                         .padding()
                         .monitorVisibility(chartThreeObserver)
+                        
                         
                         ForEach(viewModel.sortedGrades, id: \.key) { grade, count in
                             if grade != "empty" {

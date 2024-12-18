@@ -77,7 +77,7 @@ struct ThemesView: View {
             // Themes List
             ScrollView {
                 LazyVStack(spacing: 16) {
-                    ForEach(Array(themeGroups.enumerated().reversed()), id: \.1.id) { index, group in
+                    ForEach(Array(themeGroups.enumerated()), id: \.1.id) { index, group in
                         ThemeCardView(
                             group: group,
                             isExpanded: expandedId == group.id,

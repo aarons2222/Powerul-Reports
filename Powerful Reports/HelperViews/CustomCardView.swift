@@ -44,6 +44,17 @@ struct CustomCardView<Content: View>: View {
         .cardBackground()
     }
 }
+struct CardBackground: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .background(.color0.opacity(0.3))
+            .cornerRadius(20)
+            .shadow(color: .color4.opacity(0.05), radius: 4)
+    }
+}
 
-#Preview {
+extension View {
+    func cardBackground() -> some View {
+        modifier(CardBackground())
+    }
 }

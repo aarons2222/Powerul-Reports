@@ -16,6 +16,7 @@ final class InspectorProfileViewModel: ObservableObject {
     @Published var themeStatistics: ThemeStatistics
     @Published private(set) var sortedGrades: [(key: String, value: Int)] = []
     @Published private(set) var areas: [String] = []
+    @Published private(set) var themeAnalytics: ThemeAnalyzer.InspectorThemeAnalytics?
     
     init(profile: InspectorProfile, reports: [Report]) {
         self.profile = profile
@@ -36,6 +37,9 @@ final class InspectorProfileViewModel: ObservableObject {
         
         // Theme Statistics
         themeStatistics = ThemeAnalyzer.getInspectorThemeStatistics(from: reports, for: profile.name)
+        
+        // Theme Analytics
+        themeAnalytics = ThemeAnalyzer.calculateInspectorThemeAnalytics(from: reports, for: profile.name)
         
         // Sorted Grades
         sortedGrades = profile.grades.sorted(by: { $0.value > $1.value })
