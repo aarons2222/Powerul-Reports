@@ -76,7 +76,9 @@ struct ThemesView: View {
             
             // Themes List
             ScrollView {
-                LazyVStack(spacing: 16) {
+                Spacer()
+                    .frame(height: 20)
+                LazyVStack(spacing: 0) {
                     ForEach(Array(themeGroups.enumerated()), id: \.1.id) { index, group in
                         ThemeCardView(
                             group: group,
@@ -93,7 +95,7 @@ struct ThemesView: View {
                        
                     }
                 }
-                .padding()
+         
             }
         }
         .ignoresSafeArea()

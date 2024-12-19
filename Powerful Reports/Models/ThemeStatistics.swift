@@ -89,8 +89,12 @@ extension ThemeAnalyzer {
     struct ThemeCorrelation: Identifiable {
         let id = UUID()
         let theme: String
-        let outcome: String
-        let percentage: Double
+        let outcome: String // This will be either the outcome text or the grade check value
+        var percentage: Double
+        let ratingValue: RatingValue // Using the same RatingValue enum from AllReportsView
+        let location: String
+        let ratings: [String]
+        let ratingReports: [(rating: String, reportId: String, location: String)]
     }
     
     struct ThemeFrequencyStats: Identifiable {
@@ -114,36 +118,77 @@ extension ThemeAnalyzer {
         let averageThemesPerReport: Double
         let themeOutcomeCorrelations: [ThemeCorrelation]
         let frequentThemes: [ThemeFrequencyStats]
-        let themesByProvisionType: [String: [ThemeFrequency]]
-        let commonThemePairs: [ThemePairStatistic]
-        let uniqueThemeCombinations: [ThemePairStatistic]
+        let themesByProvisionType: [String: Int]
+        let locations: Set<String>
+        let totalReports: Int
     }
     
     static func calculateInspectorThemeAnalytics(from allReports: [Report], for inspector: String) -> InspectorThemeAnalytics {
         let inspectorReports = allReports.filter { $0.inspector == inspector }
-        let otherReports = allReports.filter { $0.inspector != inspector }
+        let totalReports = inspectorReports.count
         
-        // Calculate theme-outcome correlations
-        var themeOutcomeCounts: [String: [String: Int]] = [:]
+        print("Total reports for inspector \(inspector): \(inspectorReports.count)")
+        
+        // Track theme occurrences and their ratings
+        var themeReports: [String: Set<String>] = [:] // theme -> set of report IDs
+        var themeRatings: [String: [(rating: String, reportId: String, location: String)]] = [:]
+        var themeLocations: [String: Set<String>] = [:]
+        
         for report in inspectorReports {
-            for theme in report.themes {
-                if themeOutcomeCounts[theme.topic] == nil {
-                    themeOutcomeCounts[theme.topic] = [:]
+            // Get unique themes in this report
+            let uniqueThemes = Set(report.themes.map { $0.topic })
+            
+            // Track report for each theme
+            for theme in uniqueThemes {
+                themeReports[theme, default: []].insert(report.id)
+                
+                // Get rating for this theme
+                let rating: String
+                if let overallRating = report.overallRating {
+                    rating = overallRating
+                } else if !report.outcome.isEmpty {
+                    rating = report.outcome
+                } else {
+                    rating = ""
                 }
-                themeOutcomeCounts[theme.topic]?[report.outcome, default: 0] += 1
+                
+                themeRatings[theme, default: []].append((rating: rating, reportId: report.id, location: report.localAuthority))
+                
+                if !report.localAuthority.isEmpty {
+                    themeLocations[theme, default: []].insert(report.localAuthority)
+                }
             }
         }
         
-        // Combine outcomes for each theme and sort by total count
-        let correlations = themeOutcomeCounts.map { theme, outcomes -> ThemeCorrelation in
-            let totalCount = outcomes.values.reduce(0, +)
-            // Find the most common outcome for this theme
-            let mostCommonOutcome = outcomes.max { $0.value < $1.value }
-            return ThemeCorrelation(
+        // Calculate correlations
+        let correlations = themeReports.map { theme, reportIds in
+            let reportCount = Double(reportIds.count)
+            let percentage = (reportCount / Double(totalReports)) * 100
+            
+            // Get most common rating for this theme
+            let ratings = themeRatings[theme] ?? []
+            var ratingCounts: [String: Int] = [:]
+            for rating in ratings {
+                ratingCounts[rating.rating, default: 0] += 1
+            }
+            let mostCommonRating = ratingCounts.max(by: { $0.value < $1.value })?.key ?? ""
+            
+            let correlation = ThemeCorrelation(
                 theme: theme,
-                outcome: mostCommonOutcome?.key ?? "",
-                percentage: Double(mostCommonOutcome?.value ?? 0) / Double(totalCount) * 100
+                outcome: mostCommonRating,
+                percentage: percentage,
+                ratingValue: RatingValue(rawValue: mostCommonRating) ?? .none,
+                location: Array(themeLocations[theme] ?? []).first ?? "",
+                ratings: Array(Set(ratings.map { $0.rating })),
+                ratingReports: ratings
             )
+            
+            print("Theme: \(theme)")
+            print("- Appears in \(reportIds.count) out of \(totalReports) reports")
+            print("- Percentage: \(percentage)%")
+            print("- Reports by rating: \(ratings.map { $0.rating })")
+            
+            return correlation
         }
         .sorted { $0.percentage > $1.percentage }
         
@@ -164,7 +209,7 @@ extension ThemeAnalyzer {
         }
         
         // Calculate average themes per report
-        let averageThemes = Double(inspectorReports.reduce(0) { $0 + $1.themes.count }) / Double(inspectorReports.count)
+        let averageThemes = Double(inspectorReports.reduce(0) { $0 + $1.themes.count }) / Double(totalReports)
         
         // Calculate theme pairs
         var themePairCounts: [ThemePair: Int] = [:]
@@ -183,7 +228,7 @@ extension ThemeAnalyzer {
         
         // Calculate theme pairs in other reports for comparison
         var otherThemePairCounts: [ThemePair: Int] = [:]
-        for report in otherReports {
+        for report in allReports.filter({ $0.inspector != inspector }) {
             let themes = report.themes.map { $0.topic }
             for i in 0..<themes.count {
                 for j in (i+1)..<themes.count {
@@ -210,7 +255,7 @@ extension ThemeAnalyzer {
         let uniquePairs = themePairCounts.compactMap { pair, count -> ThemePairStatistic? in
             let otherCount = otherThemePairCounts[pair] ?? 0
             let inspectorFrequency = Double(count) / Double(inspectorReports.count)
-            let otherFrequency = Double(otherCount) / Double(otherReports.count)
+            let otherFrequency = Double(otherCount) / Double(allReports.filter({ $0.inspector != inspector }).count)
             
             if inspectorFrequency > otherFrequency * 2 { // At least twice as frequent
                 return ThemePairStatistic(
@@ -231,9 +276,9 @@ extension ThemeAnalyzer {
             averageThemesPerReport: averageThemes,
             themeOutcomeCorrelations: correlations,
             frequentThemes: Array(frequentThemes.prefix(10)),
-            themesByProvisionType: themesByProvisionType,
-            commonThemePairs: Array(commonPairs.prefix(10)),
-            uniqueThemeCombinations: Array(uniquePairs.prefix(10))
+            themesByProvisionType: themesByProvisionType.mapValues { $0.count },
+            locations: Set(inspectorReports.compactMap { $0.localAuthority }),
+            totalReports: totalReports
         )
     }
 }

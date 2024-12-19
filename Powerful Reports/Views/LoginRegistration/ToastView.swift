@@ -35,29 +35,33 @@ struct ToastModifier: ViewModifier {
         ZStack(alignment: .top) {
             content
             
-            if isPresented {
+            Group {
                 ToastView(message: message, isError: isError)
                     .padding(.horizontal)
                     .padding(.vertical, 0)
                     .offset(y: offset)
-                    .onAppear {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
-                            offset = 0
-                        }
-                        
-                        DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
-                                offset = -150
-                            }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                isPresented = false
-                                offset = -150  // Reset for next time
-                            }
-                        }
+            }
+            .opacity(isPresented ? 1 : 0)
+        }
+        .onChange(of: isPresented) { newValue in
+            if newValue {
+                // Show toast
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                    offset = 0
+                }
+                
+                // Schedule hide
+                DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                        offset = -150
                     }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        isPresented = false
+                        offset = -150  // Reset for next time
+                    }
+                }
             }
         }
-        .padding(0)
     }
 }
 

@@ -22,8 +22,6 @@ struct CustomCardView<Content: View>: View {
     }
     
     var body: some View {
-        
-        
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text(title)
@@ -31,6 +29,8 @@ struct CustomCardView<Content: View>: View {
                     .fontWeight(.regular)
                     .foregroundColor(.color4)
                 Spacer()
+                
+             
                 
                 if let nav = navigationLink {
                     nav

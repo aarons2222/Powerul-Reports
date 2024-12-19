@@ -11,6 +11,7 @@ struct ReportView: View {
     var report: Report
     @State private var selectedTheme: String?
     @State private var navigateToOfsted: Bool = false
+    @State private var showToast = false
     @Environment(\.colorScheme) var colorScheme
     
     init(report: Report) {
@@ -68,16 +69,36 @@ struct ReportView: View {
                     }
                     
                     // Themes Card
-                    CustomCardView("Themes") {
+                    VStack(spacing: 0){
+                        HStack {
+
+                            Text("Inspection Outcomes")
+                                .font(.title3)
+                                .fontWeight(.regular)
+                                .foregroundColor(.color4)
+                            Spacer()
+                            
+                            
+                            Button{
+                                showToast.toggle()
+                                
+                                let combinedString = report.sortedThemes.map { $0.topic }.joined(separator: "\n")
+                                UIPasteboard.general.string = combinedString
+
+                            }label: {
+                                Image(systemName: "document.on.clipboard")
+                                    .font(.title3)
+                                    .foregroundColor(.color1)
+                            }
+                           
+                        }
+                        .padding(.bottom, 20)
+               
                         LazyVGrid(columns: [
                             GridItem(.adaptive(minimum: 150), spacing: 12)
                         ], spacing: 12) {
                             ForEach(report.sortedThemes, id: \.topic) { theme in
-                                Button {
-                                    withAnimation(.spring()) {
-                                        selectedTheme = selectedTheme == theme.topic ? nil : theme.topic
-                                    }
-                                } label: {
+                           
                                     Text(theme.topic)
                                         .font(.subheadline)
                                         .fontWeight(.medium)
@@ -89,25 +110,27 @@ struct ReportView: View {
                                                 .fill(selectedTheme == theme.topic ? Color.color1 : Color.color1.opacity(0.1))
                                         }
                                         .contentShape(Rectangle())
-                                }
+                                
                             }
                         }
+                    
                     }
+                    .padding()
+                    .cardBackground()
+                    
+                    
+                    GlobalButton(title: "View Full Report") {
+                        navigateToOfsted = true
+                    }
+                    .padding(.bottom, 50)
                 }
-   
-                
-                GlobalButton(title: "View Full Report") {
-                    navigateToOfsted = true
-                }
-                .padding(.bottom, 50)
-          
+                .padding(.horizontal)
             }
             .scrollIndicators(.hidden)
-            .padding()
-            
         }
         .ignoresSafeArea()
         .navigationBarHidden(true)
+        .toast(isPresented: $showToast, message: "Themes Copied to Clipboard", isError: false)
         .navigationDestination(isPresented: $navigateToOfsted) {
             OfstedView(URN: report.referenceNumber)
         }
@@ -138,12 +161,6 @@ struct InfoRow: View {
     }
 }
 
-
-
-
-
-
-
 struct OfstedView: View {
     @State private var isLoading = false
     @State private var showingDetail = false
@@ -153,26 +170,20 @@ struct OfstedView: View {
     var body: some View {
         VStack(spacing: 0) {
             CustomHeaderVIew(title: URN)
-        ZStack {
-            
-       
+            ZStack {
                 OfstedWebView(
                     searchText:URN,
                     isLoading: $isLoading
                 )
-        
-            
-         
-            if isLoading {
-                OffestedLoadingView()
+                if isLoading {
+                    OffestedLoadingView()
+                }
             }
-        }
         }
         .ignoresSafeArea()
         .navigationBarHidden(true)
     }
 }
-
 
 struct OffestedLoadingView: View {
     @State private var magnifyingGlassPosition = CGSize.zero

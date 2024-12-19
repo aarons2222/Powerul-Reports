@@ -37,10 +37,20 @@ struct FilterView: View {
                             .transition(.opacity)
                     }
                     
+                    FilterSection(title: "Filter by Theme") {
+                        CustomPicker(selection: $viewModel.selectedTheme,
+                                   items: viewModel.availableThemes, placeHolder: "Themes")
+                            .transition(.opacity)
+                    }
+                    
+                    
+                    
+                    
                     FilterSection(title: "Grade/Outcome") {
                         RatingGrid(selectedRating: createRatingBinding())
                             .transition(.opacity)
                     }
+                    
                     
                     Spacer()
                     
@@ -66,6 +76,7 @@ struct FilterView: View {
                         viewModel.selectedProvisionType = nil
                         viewModel.selectedRating = nil
                         viewModel.selectedOutcome = nil
+                        viewModel.selectedTheme = nil
                     }
                 }
             }

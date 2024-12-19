@@ -25,6 +25,7 @@ import SwiftUI
         case rating
         case outcome
         case dateRange
+        case theme
     }
     
     struct ActiveFilter: Hashable {
@@ -119,6 +120,17 @@ import SwiftUI
         }
     }
     
+    @Published var selectedTheme: String? {
+        didSet {
+            if let theme = selectedTheme {
+                UserDefaults.standard.set(theme, forKey: "allReports.theme")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "allReports.theme")
+            }
+            updateFilters()
+        }
+    }
+    
     private let mainViewModel: InspectionReportsViewModel
     private let dateFormatter: DateFormatter
     
@@ -140,6 +152,7 @@ import SwiftUI
         self.selectedProvisionType = nil
         self.selectedRating = nil
         self.selectedOutcome = nil
+        self.selectedTheme = nil
         
         // Load data asynchronously
         Task { @MainActor in
@@ -170,6 +183,11 @@ import SwiftUI
             if let outcome = UserDefaults.standard.string(forKey: "allReports.outcome"),
                availableOutcomes.contains(outcome) {
                 selectedOutcome = outcome
+            }
+            
+            if let theme = UserDefaults.standard.string(forKey: "allReports.theme"),
+               availableThemes.contains(theme) {
+                selectedTheme = theme
             }
             
             // Restore date range if it exists
@@ -311,6 +329,41 @@ import SwiftUI
         return Array(Set(filteredReports.map { $0.outcome }.filter { !$0.isEmpty })).sorted()
     }
     
+    var availableThemes: [String] {
+        let filteredReports = mainViewModel.reports.filter { report in
+            var matches = true
+            
+            if let inspector = selectedInspector {
+                matches = matches && report.inspector == inspector
+            }
+            
+            if let authority = selectedAuthority {
+                matches = matches && report.localAuthority == authority
+            }
+            
+            if let provisionType = selectedProvisionType {
+                matches = matches && report.typeOfProvision == provisionType
+            }
+            
+            if let rating = selectedRating {
+                matches = matches && report.overallRating == rating
+            }
+            
+            if let outcome = selectedOutcome {
+                matches = matches && report.outcome == outcome
+            }
+            
+            return matches
+        }
+        
+        // Get unique themes from filtered reports
+        let themes = Set(filteredReports.flatMap { report in
+            report.themes.map { $0.topic }
+        })
+        
+        return Array(themes).sorted()
+    }
+    
     var totalReportsCount: Int {
         reportCountCache
     }
@@ -332,6 +385,9 @@ import SwiftUI
         }
         if let outcome = selectedOutcome {
             filters.append(ActiveFilter(type: .outcome, text: outcome))
+        }
+        if let theme = selectedTheme {
+            filters.append(ActiveFilter(type: .theme, text: theme))
         }
         if let dateRange = selectedDateRange {
             let formatter = DateFormatter()
@@ -355,6 +411,8 @@ import SwiftUI
             selectedRating = nil
         case .outcome:
             selectedOutcome = nil
+        case .theme:
+            selectedTheme = nil
         case .dateRange:
             selectedDateRange = nil
         }
@@ -385,6 +443,7 @@ import SwiftUI
         selectedProvisionType = nil
         selectedRating = nil
         selectedOutcome = nil
+        selectedTheme = nil
         selectedDateRange = nil
         updateFilters()
     }
@@ -408,6 +467,7 @@ import SwiftUI
                              selectedProvisionType != nil ||
                              selectedRating != nil ||
                              selectedOutcome != nil ||
+                             selectedTheme != nil ||
                              selectedDateRange != nil
         }
     }
@@ -492,6 +552,11 @@ import SwiftUI
         // Apply outcome filter
         if let outcome = selectedOutcome {
             filteredReports = filteredReports.filter { $0.outcome == outcome }
+        }
+        
+        // Apply theme filter
+        if let theme = selectedTheme {
+            filteredReports = filteredReports.filter { $0.themes.contains { $0.topic == theme } }
         }
         
         // Apply date range filter
