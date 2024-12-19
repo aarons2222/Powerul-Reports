@@ -68,7 +68,7 @@ struct SettingsView: View {
                 
                 ScrollView {
                     
-                    Color.clear.frame(height: 20)
+            
                     
          
                     
@@ -226,7 +226,7 @@ struct SettingsView: View {
               
                     
                     }
-                    .padding(.vertical, 20)
+                    .padding(.bottom, 10)
                     
                     
                     Text("Version \(Bundle.main.appVersionLong)")

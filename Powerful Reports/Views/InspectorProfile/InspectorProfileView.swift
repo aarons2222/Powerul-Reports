@@ -115,22 +115,22 @@ struct InspectorProfileView: View {
                 }
                 .frame(height: 200)
                 .chartLegend(position: .bottom, spacing: 20)
-                .chartBackground { chartProxy in
-                    GeometryReader { geometry in
-                        if let plotFrame = chartProxy.plotFrame {
-                            let frame = geometry[plotFrame]
-                            VStack {
-                                Text("\(viewModel.totalInspections)")
-                                    .font(.title2)
-                                    .bold()
-                                Text("Total")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .position(x: frame.midX, y: frame.midY)
-                        }
-                    }
-                }
+//                .chartBackground { chartProxy in
+//                    GeometryReader { geometry in
+//                        if let plotFrame = chartProxy.plotFrame {
+//                            let frame = geometry[plotFrame]
+//                            VStack {
+//                                Text("\(viewModel.totalInspections)")
+//                                    .font(.title2)
+//                                    .bold()
+//                                Text("Total")
+//                                    .font(.caption)
+//                                    .foregroundColor(.secondary)
+//                            }
+//                            .position(x: frame.midX, y: frame.midY)
+//                        }
+//                    }
+//                }
                 .monitorVisibility(chartThreeObserver)
                 
                 LazyVStack(alignment: .leading, spacing: 8) {

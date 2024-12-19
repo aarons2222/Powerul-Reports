@@ -61,7 +61,7 @@ struct Powerful_ReportsApp: App {
                                 await ProductSubscription.shared.observeTransactionUpdates()
                             }
                     } else {
-                        LoginRegView()
+                        SignInWithApple()
                             .environmentObject(authModel)
                     }
                 } else {

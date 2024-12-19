@@ -114,7 +114,8 @@ actor ProductSubscription {
             case .unverified(_, let error):
                 print("ProductSubscription: Retry verification failed: \(error)")
                 return nil
-            @unknown default:
+          
+             default:
                 print("ProductSubscription: Unknown verification result")
                 return nil
             }

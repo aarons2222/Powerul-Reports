@@ -128,13 +128,16 @@ struct InspectorThemeAnalyticsView: View {
                             color: .color2,
                             infoAction: { showingAverageInfo.toggle() }
                         )
-                        .alert(isPresented: $showingAverageInfo) {
-                            Alert(
-                                title: Text("Average Themes Per Report"),
-                                message: Text("This shows the typical number of themes identified in each report by this inspector. A higher number may indicate more detailed analysis."),
-                                dismissButton: .default(Text("OK"))
-                            )
+                        
+                        .popView(isPresented: $showingAverageInfo) {
+                            showingAverageInfo = false
+                        } content: {
+                            InfoAlert(title: "Average Themes Per Report", message: "his shows the typical number of themes identified in each report by this inspector. A higher number may indicate more detailed analysis.", show: $showingAverageInfo)
                         }
+                        
+                        
+                        
+                       
                         
                         StatCard(
                             title: "Unique Themes",
@@ -144,13 +147,14 @@ struct InspectorThemeAnalyticsView: View {
                             color: .color7,
                             infoAction: { showingThemesInfo.toggle() }
                         )
-                        .alert(isPresented: $showingThemesInfo) {
-                            Alert(
-                                title: Text("Total Unique Themes"),
-                                message: Text("The total number of different themes this inspector has identified across all their reports."),
-                                dismissButton: .default(Text("OK"))
-                            )
+                        .popView(isPresented: $showingThemesInfo) {
+                            showingThemesInfo = false
+                        } content: {
+                            InfoAlert(title: "Total Unique Themes", message: "The total number of different themes this inspector has identified across all their reports.", show: $showingThemesInfo)
                         }
+                        
+                        
+                     
                     }
                     .padding(.horizontal)
                     
@@ -181,15 +185,17 @@ struct InspectorThemeAnalyticsView: View {
                                     showCorrelationInfo.toggle()
                                 }) {
                                     Image(systemName: "info.circle")
-                                        .foregroundColor(.secondary)
+                                        .font(.title2)
+                                        .foregroundColor(.color4)
                                 }
-                                .alert(isPresented: $showCorrelationInfo) {
-                                    Alert(
-                                        title: Text("Theme Correlations"),
-                                        message: Text("Shows how often specific themes are associated with particular outcomes in the inspector's reports. This helps identify patterns in their assessments."),
-                                        dismissButton: .default(Text("OK"))
-                                    )
+                                
+                                .popView(isPresented: $showCorrelationInfo) {
+                                    showCorrelationInfo = false
+                                } content: {
+                                    InfoAlert(title: "Theme Correlations", message: "Shows how often specific themes are associated with particular outcomes in the inspector's reports. This helps identify patterns in their assessments.", show: $showCorrelationInfo)
                                 }
+                                
+                                
                                 Spacer()
                             }
                             
@@ -315,9 +321,13 @@ struct StatCard: View {
                 Text(title)
                     .foregroundColor(.secondary)
                 Spacer()
-                Button(action: infoAction) {
-                    Image(systemName: "info.circle")
-                        .foregroundColor(.secondary)
+                VStack{
+                    Button(action: infoAction) {
+                        Image(systemName: "info.circle")
+                            .font(.title2)
+                            .foregroundColor(.color1)
+                    }
+                    Spacer()
                 }
             }
             .font(.subheadline)
@@ -367,35 +377,6 @@ struct CorrelationCard: View {
             .cardBackground()
             .cornerRadius(12)
             
-         
-        
-        
-        
-//        VStack(alignment: .leading, spacing: 8) {
-//            Text(correlation.theme)
-//                .font(.headline)
-//                .fontWeight(.regular)
-//                .lineLimit(2)
-//                .minimumScaleFactor(0.8)
-//            
-//            HStack(alignment: .firstTextBaseline, spacing: 4) {
-//                Text("\(Int(correlation.percentage))")
-//                    .font(.title2)
-//                    .fontWeight(.regular)
-//                Text("%")
-//                    .font(.headline)
-//                    .foregroundColor(.secondary)
-//                
-//                Spacer()
-//                
-//         
-//            }
-//            
-//        
-//        }
-//        .padding()
-//        .cardBackground()
-//        .cornerRadius(12)
     }
 }
 
@@ -416,5 +397,64 @@ struct EmptyStateView: View {
         .padding(.vertical, 40)
         .cardBackground()
         .cornerRadius(12)
+    }
+}
+
+
+
+struct InfoAlert: View {
+    var title: String
+    var message: String
+    @Binding var show: Bool
+   
+    var body: some View {
+        
+        
+        
+        
+        VStack(spacing: 20) {
+           
+            
+            Text(title)
+                .font(.title3)
+                .fontWeight(.regular)
+              
+            
+            
+            Text(message)
+                .font(.body)
+                .fontWeight(.regular)
+            
+        
+            
+            HStack(spacing: 10) {
+                Button {
+                    show = false
+                } label: {
+                    Text("Dismiss")
+                        .foregroundStyle(.white)
+                        .fontWeight(.semibold)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 25)
+                        .background {
+                          Capsule()
+                                .fill(.color1.gradient)
+                        }
+                }
+
+            }
+    
+        }
+        .frame(width: 250)
+        .padding()
+        .cardBackground()
+        .background {
+            RoundedRectangle(cornerRadius: 20)
+                .fill(.white)
+             
+        }
+       
+        
+        
     }
 }

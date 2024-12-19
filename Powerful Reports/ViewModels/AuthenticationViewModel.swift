@@ -255,6 +255,8 @@ class AuthenticationViewModel: ObservableObject {
                     return (false, "Apple Sign In failed")
                 }
                 
+                
+                
                 // Convert ASAuthorizationAppleIDCredential to AuthCredential
                 let credential = OAuthProvider.credential(
                     withProviderID: "apple.com",
@@ -274,7 +276,6 @@ class AuthenticationViewModel: ObservableObject {
         }
     }
     
-    // Helper function to handle Apple Sign In
     private func signInWithApple() async -> (ASAuthorizationAppleIDCredential?, Error?) {
         return await withCheckedContinuation { continuation in
             let provider = ASAuthorizationAppleIDProvider()
@@ -290,7 +291,13 @@ class AuthenticationViewModel: ObservableObject {
             objc_setAssociatedObject(controller, "delegate", delegate, .OBJC_ASSOCIATION_RETAIN)
             
             controller.delegate = delegate
-            controller.presentationContextProvider = UIApplication.shared.windows.first?.rootViewController as? ASAuthorizationControllerPresentationContextProviding
+            
+            // Updated window scene access
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let rootViewController = windowScene.windows.first?.rootViewController as? ASAuthorizationControllerPresentationContextProviding {
+                controller.presentationContextProvider = rootViewController
+            }
+            
             controller.performRequests()
         }
     }

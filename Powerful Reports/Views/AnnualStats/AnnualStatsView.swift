@@ -310,7 +310,7 @@ struct AnnualStatsView: View {
             let right = z * sqrt((p * (1 - p) + (z * z) / (4 * n)) / n)
             let under = 1 + (z * z) / n
             
-            let score = ((left - right) / under) * 100
+            //let score = ((left - right) / under) * 100
             
             return (
                 authority: authority,
