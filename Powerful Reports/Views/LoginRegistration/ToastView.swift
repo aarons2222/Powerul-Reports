@@ -43,8 +43,8 @@ struct ToastModifier: ViewModifier {
             }
             .opacity(isPresented ? 1 : 0)
         }
-        .onChange(of: isPresented) { newValue in
-            if newValue {
+        .onChange(of: isPresented) {
+            if isPresented {
                 // Show toast
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
                     offset = 0

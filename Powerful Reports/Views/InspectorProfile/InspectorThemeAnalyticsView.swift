@@ -2,6 +2,7 @@ import SwiftUI
 import Charts
 
 struct InspectorThemeAnalyticsView: View {
+    @StateObject private var viewModel: InspectorThemeAnalyticsViewModel
     let analytics: ThemeAnalyzer.InspectorThemeAnalytics
     let inspectorName: String
     @State private var showingAverageInfo = false
@@ -11,6 +12,32 @@ struct InspectorThemeAnalyticsView: View {
     @State private var selectedRating: String = "All"
     @State private var selectedLocation: String? = nil
     @State private var showMetOnly = false
+    @State private var showCorrelationInfo = false
+    
+    init(analytics: ThemeAnalyzer.InspectorThemeAnalytics, inspectorName: String) {
+        self.analytics = analytics
+        self.inspectorName = inspectorName
+        _viewModel = StateObject(wrappedValue: InspectorThemeAnalyticsViewModel(analytics: analytics))
+        
+        // Print all unique themes first
+        let allThemes = Set(analytics.frequentThemes.map { $0.theme }).sorted()
+        print("\nAll Unique Themes List:")
+        for (index, theme) in allThemes.enumerated() {
+            print("\(theme) [\(index + 1)]")
+        }
+        print("Total unique themes: \(allThemes.count)\n")
+        
+        // Print themes by correlation
+        print("\nThemes by Correlation:")
+        for correlation in analytics.themeOutcomeCorrelations {
+            print("\nTheme Group:")
+            print(correlation.theme)
+            print("Rating: \(correlation.outcome)")
+            print("Percentage: \(Int(correlation.percentage))%")
+            print("Number of reports: \(correlation.ratingReports.count)")
+            print("---")
+        }
+    }
     
     private let columns = [
         GridItem(.flexible(), spacing: 16),
@@ -33,6 +60,16 @@ struct InspectorThemeAnalyticsView: View {
             case .zeroToTwentyFive: return 0...25
             }
         }
+        
+        var displayName: String {
+            switch self {
+            case .all: return "All"
+            case .seventyFiveToHundred: return "75-100%"
+            case .fiftyToSeventyFive: return "50-75%"
+            case .twentyFiveToFifty: return "25-50%"
+            case .zeroToTwentyFive: return "0-25%"
+            }
+        }
     }
     
     let ratingOptions = [
@@ -46,70 +83,31 @@ struct InspectorThemeAnalyticsView: View {
     ]
     
     var filteredCorrelations: [ThemeAnalyzer.ThemeCorrelation] {
-        // First filter by original percentage range
-        let percentageFiltered = analytics.themeOutcomeCorrelations.filter { correlation in
-            selectedPercentageRange.range == nil ||
-                selectedPercentageRange.range!.contains(correlation.percentage)
-        }
-        
-        // Count total reports that match the rating and location filters
-        let totalFilteredReports = Set(percentageFiltered.flatMap { correlation in
-            correlation.ratingReports.filter { report in
-                let matchesRating = switch selectedRating {
-                    case "All": true
-                    case "Outstanding": report.rating.hasPrefix("Outstanding")
-                    case "Good": report.rating.hasPrefix("Good")
-                    case "Requires Improvement": report.rating.hasPrefix("Requires Improvement")
-                    case "Inadequate": report.rating.hasPrefix("Inadequate")
-                    case "Met": report.rating.hasPrefix("Outstanding") || report.rating.hasPrefix("Good") || report.rating == "Met"
-                    case "Not Met": report.rating.hasPrefix("Requires Improvement") || report.rating.hasPrefix("Inadequate") || report.rating == "Not Met"
-                    default: false
-                }
-                
-                let matchesLocation = selectedLocation == nil || report.location == selectedLocation
-                
-                return matchesRating && matchesLocation
-            }.map { $0.reportId }
-        }).count
-        
-        // Then filter by rating and location and count matching reports
-        let filtered = percentageFiltered.compactMap { correlation -> ThemeAnalyzer.ThemeCorrelation? in
-            // Count reports that match both rating and location filters
-            let matchingReports = correlation.ratingReports.filter { report in
-                let matchesRating = switch selectedRating {
-                    case "All": true
-                    case "Outstanding": report.rating.hasPrefix("Outstanding")
-                    case "Good": report.rating.hasPrefix("Good")
-                    case "Requires Improvement": report.rating.hasPrefix("Requires Improvement")
-                    case "Inadequate": report.rating.hasPrefix("Inadequate")
-                    case "Met": report.rating.hasPrefix("Outstanding") || report.rating.hasPrefix("Good") || report.rating == "Met"
-                    case "Not Met": report.rating.hasPrefix("Requires Improvement") || report.rating.hasPrefix("Inadequate") || report.rating == "Not Met"
-                    default: false
-                }
-                
-                let matchesLocation = selectedLocation == nil || report.location == selectedLocation
-                
-                return matchesRating && matchesLocation
-            }
-            
-            let matchingReportCount = matchingReports.count
-            if matchingReportCount == 0 { return nil } // Filter out themes with no matching reports
-            
-            // Create updated correlation with new percentage based on matching reports
-            var updatedCorrelation = correlation
-            updatedCorrelation.percentage = totalFilteredReports > 0 ? (Double(matchingReportCount) / Double(totalFilteredReports)) * 100 : 0
-            return updatedCorrelation
-        }
-        
-        return filtered.sorted { $0.percentage > $1.percentage }
+        let result = viewModel.filteredCorrelations(
+            percentageRange: selectedPercentageRange,
+            rating: selectedRating,
+            location: selectedLocation,
+            showMetOnly: showMetOnly
+        )
+        return result.correlations
+    }
+    
+    var filteredThemes: [(theme: String, count: Int)] {
+        let result = viewModel.filteredCorrelations(
+            percentageRange: selectedPercentageRange,
+            rating: selectedRating,
+            location: selectedLocation,
+            showMetOnly: showMetOnly
+        )
+        return result.themes
     }
     
     var uniqueLocations: [String] {
-        Array(analytics.locations).sorted()
+        Array(viewModel.uniqueLocations).sorted()
     }
     
     let ratingValues: [RatingValue] = [.outstanding, .good, .met, .requiresImprovement, .inadequate, .notmet]
-    let effectivenessGrades = ["Outstanding (Met)", "Good (Met)", "Requires Improvement (Not Met)", "Inadequate (Not Met)"]
+    let effectivenessGrades = ["Outstanding", "Good ", "Requires Improvement", "Inadequate (Not Met)"]
     
     var body: some View {
         VStack(spacing: 0) {
@@ -139,7 +137,7 @@ struct InspectorThemeAnalyticsView: View {
                         }
                         
                         StatCard(
-                            title: "Total Themes",
+                            title: "Unique Themes",
                             value: "\(analytics.frequentThemes.count)",
                             subtitle: "unique themes",
                             icon: "tag.fill",
@@ -149,7 +147,7 @@ struct InspectorThemeAnalyticsView: View {
                         .alert(isPresented: $showingThemesInfo) {
                             Alert(
                                 title: Text("Total Unique Themes"),
-                                message: Text("The total number of different themes this inspector has used across all their reports, showing their range of expertise."),
+                                message: Text("The total number of different themes this inspector has identified across all their reports."),
                                 dismissButton: .default(Text("OK"))
                             )
                         }
@@ -158,7 +156,7 @@ struct InspectorThemeAnalyticsView: View {
                     
                     CustomCardView("Top 5 Themes") {
                         LazyVStack(spacing: 12) {
-                            ForEach(analytics.frequentThemes.prefix(5)) { theme in
+                            ForEach(filteredThemes.prefix(5), id: \.theme) { theme in
                                 HStack {
                                     Text(theme.theme)
                                         .font(.subheadline)
@@ -179,12 +177,13 @@ struct InspectorThemeAnalyticsView: View {
                             HStack {
                                 Text("Theme Correlations")
                                     .font(.headline)
-                                
-                                Button(action: { showingCorrelationsInfo.toggle() }) {
+                                Button(action: {
+                                    showCorrelationInfo.toggle()
+                                }) {
                                     Image(systemName: "info.circle")
                                         .foregroundColor(.secondary)
                                 }
-                                .alert(isPresented: $showingCorrelationsInfo) {
+                                .alert(isPresented: $showCorrelationInfo) {
                                     Alert(
                                         title: Text("Theme Correlations"),
                                         message: Text("Shows how often specific themes are associated with particular outcomes in the inspector's reports. This helps identify patterns in their assessments."),
@@ -200,23 +199,24 @@ struct InspectorThemeAnalyticsView: View {
                                     Menu {
                                         Picker("Range", selection: $selectedPercentageRange) {
                                             ForEach(PercentageRange.allCases, id: \.self) { range in
-                                                Text(range.rawValue).tag(range)
+                                                Text(range.displayName).tag(range)
                                             }
                                         }
                                     } label: {
                                         HStack {
                                             Image(systemName: "line.3.horizontal.decrease.circle")
-                                            Text(selectedPercentageRange.rawValue)
+                                                .foregroundStyle(.color2)
+                                            Text(selectedPercentageRange.displayName)
+                                                .foregroundStyle(.color4)
                                         }
-                                        .foregroundColor(.primary)
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 6)
-                                        .background(Color.secondary.opacity(0.1))
-                                        .cornerRadius(8)
+                                        .background(Capsule().fill(.color0.opacity(0.2)))
                                     }
                                     
                                     Menu {
-                                        ForEach(ratingOptions, id: \.self) { rating in
+                                        Button("All Grades", action: { selectedRating = "All" })
+                                        ForEach(viewModel.availableRatings(forLocation: selectedLocation).filter { $0 != "All" }, id: \.self) { rating in
                                             Button(action: {
                                                 selectedRating = rating
                                             }) {
@@ -230,43 +230,44 @@ struct InspectorThemeAnalyticsView: View {
                                         }
                                     } label: {
                                         HStack {
-                                            Text(selectedRating)
-                                                .foregroundColor(.primary)
-                                            Image(systemName: "chevron.up.chevron.down")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
+                                            Image(systemName: "star.circle")
+                                                .foregroundStyle(.color2)
+                                            Text(selectedRating == "All" ? "Grade" : selectedRating)
+                                                .foregroundStyle(.color4)
                                         }
                                         .padding(.horizontal, 12)
-                                        .padding(.vertical, 8)
-                                        .background(Color(UIColor.tertiarySystemFill))
-                                        .cornerRadius(8)
+                                        .padding(.vertical, 6)
+                                        .background(Capsule().fill(.color0.opacity(0.2)))
                                     }
                                     
-                                    Menu {
-                                        Button("Clear", action: { selectedLocation = nil })
-                                        ForEach(uniqueLocations, id: \.self) { location in
-                                            Button(action: { 
-                                                selectedLocation = location
-                                                print("Selected location: \(location)")
-                                            }) {
-                                                HStack {
-                                                    Text(location)
-                                                    if selectedLocation == location {
-                                                        Image(systemName: "checkmark")
+                                    if !viewModel.uniqueLocations.isEmpty {
+                                        Menu {
+                                            Button("All Locations", action: { selectedLocation = nil })
+                                            ForEach(Array(viewModel.availableLocations(forRating: selectedRating)).sorted(), id: \.self) { location in
+                                                Button(action: { 
+                                                    selectedLocation = location
+                                                }) {
+                                                    HStack {
+                                                        Text(location)
+                                                        if selectedLocation == location {
+                                                            Image(systemName: "checkmark")
+                                                        }
                                                     }
                                                 }
                                             }
+                                        } label: {
+                                            HStack {
+                                                Image(systemName: "mappin.circle")
+                                                    .foregroundStyle(.color2)
+                                                Text(selectedLocation ?? "Location")
+                                                    .foregroundStyle(.color4)
+                                            }
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(Capsule().fill(.color0.opacity(0.2)))
+                                            
+                                            
                                         }
-                                    } label: {
-                                        HStack {
-                                            Image(systemName: "mappin.circle")
-                                            Text(selectedLocation ?? "Location")
-                                        }
-                                        .foregroundColor(.primary)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.secondary.opacity(0.1))
-                                        .cornerRadius(8)
                                     }
                                 }
                                 .padding(.horizontal, 1)
@@ -279,7 +280,7 @@ struct InspectorThemeAnalyticsView: View {
                                 message: "No correlations found in this range"
                             )
                         } else {
-                            LazyVGrid(columns: columns, spacing: 16) {
+                            VStack(spacing: 16){
                                 ForEach(filteredCorrelations) { correlation in
                                     CorrelationCard(correlation: correlation)
                                 }
@@ -340,38 +341,61 @@ struct CorrelationCard: View {
     let correlation: ThemeAnalyzer.ThemeCorrelation
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 8) {
+        
+        
+     
+            VStack(alignment: .leading, spacing: 10) {
                 Text(correlation.theme)
                     .font(.headline)
                     .fontWeight(.regular)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.8)
-                    .padding(.bottom)
-                
-     
-                
-            
-                
-             
-                
+                Spacer()
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text("\(Int(correlation.percentage))")
-                        .font(.title2)
+                        .font(.subheadline)
                         .fontWeight(.regular)
+                        .foregroundColor(.gray)
+                    
                     Text("%")
                         .font(.headline)
                         .foregroundColor(.secondary)
+                        Spacer()
                 }
-            }
+                
+                ProgressView(value: correlation.percentage, total: 100)
+                    .tint(.color2)
+            } .padding()
+            .cardBackground()
+            .cornerRadius(12)
             
-            ProgressView(value: correlation.percentage, total: 100)
-                .tint(.color2)
-        }
-        .padding()
-        .frame(height: 200)
-        .cardBackground()
-        .cornerRadius(12)
+         
+        
+        
+        
+//        VStack(alignment: .leading, spacing: 8) {
+//            Text(correlation.theme)
+//                .font(.headline)
+//                .fontWeight(.regular)
+//                .lineLimit(2)
+//                .minimumScaleFactor(0.8)
+//            
+//            HStack(alignment: .firstTextBaseline, spacing: 4) {
+//                Text("\(Int(correlation.percentage))")
+//                    .font(.title2)
+//                    .fontWeight(.regular)
+//                Text("%")
+//                    .font(.headline)
+//                    .foregroundColor(.secondary)
+//                
+//                Spacer()
+//                
+//         
+//            }
+//            
+//        
+//        }
+//        .padding()
+//        .cardBackground()
+//        .cornerRadius(12)
     }
 }
 

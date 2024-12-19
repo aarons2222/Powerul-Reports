@@ -166,7 +166,7 @@ class AuthenticationViewModel: ObservableObject {
             // Check if email is verified
             if !result.user.isEmailVerified {
                 print("⚠️ Email not verified")
-                try await Auth.auth().signOut()
+                try Auth.auth().signOut()
                 throw NSError(domain: "", code: -1, 
                             userInfo: [NSLocalizedDescriptionKey: "Please verify your email before signing in"])
             }
@@ -301,14 +301,22 @@ class AuthenticationViewModel: ObservableObject {
             return (false, "No user found")
         }
         
+//        do {
+//            try await user.updateEmail(to: newEmail)
+//            // Send verification email to new address
+//            try await user.sendEmailVerification()
+//            return (true, "Email updated successfully. Please verify your new email address.")
+//        } catch {
+//            return (false, error.localizedDescription)
+//        }
+        
         do {
-            try await user.updateEmail(to: newEmail)
-            // Send verification email to new address
-            try await user.sendEmailVerification()
-            return (true, "Email updated successfully. Please verify your new email address.")
+            try await user.sendEmailVerification(beforeUpdatingEmail: newEmail)
+            return (true, "A verification email has been sent to the new email address. Please verify it to complete the update.")
         } catch {
             return (false, error.localizedDescription)
         }
+
     }
     
     // Change password function

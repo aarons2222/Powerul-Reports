@@ -72,8 +72,8 @@ struct ReportView: View {
                     VStack(spacing: 0){
                         HStack {
 
-                            Text("Inspection Outcomes")
-                                .font(.title3)
+                            Text("Inspection Themes")
+                                .font(.headline)
                                 .fontWeight(.regular)
                                 .foregroundColor(.color4)
                             Spacer()

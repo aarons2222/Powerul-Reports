@@ -1,22 +1,47 @@
 import Foundation
+import SwiftUI
 
 extension Notification.Name {
     static let subscriptionStatusDidChange = Notification.Name("subscriptionStatusDidChange")
 }
 
-class SubscriptionPersistence {
+class SubscriptionPersistence: ObservableObject {
     static let shared = SubscriptionPersistence()
     private let defaults = UserDefaults.standard
     
     private let subscriptionStatusKey = "com.powerfulreports.subscriptionStatus"
     private let subscriptionExpiryKey = "com.powerfulreports.subscriptionExpiry"
+    private let lastVerificationKey = "com.powerfulreports.lastVerification"
     
     // Cache the current status to avoid frequent UserDefaults reads
     private var cachedStatus: SubscriptionStatus?
     private var lastExpiryCheck: Date?
-    private let expiryCheckInterval: TimeInterval = 60 // Check expiry once per minute
+    private let expiryCheckInterval: TimeInterval = 30 // Check expiry every 30 seconds
     
-    private init() {}
+    private init() {
+        // Force a fresh check on app launch
+        refreshCache()
+    }
+    
+    func refreshCache() {
+        print("SubscriptionPersistence: Refreshing cache")
+        lastExpiryCheck = nil
+        cachedStatus = nil
+    }
+    
+    var scenePhaseObserver: Any?
+    
+    func startObservingScenePhase() {
+        scenePhaseObserver = NotificationCenter.default.addObserver(forName: UIScene.didActivateNotification, object: nil, queue: nil) { [weak self] _ in
+            self?.refreshCache()
+        }
+    }
+    
+    func stopObservingScenePhase() {
+        if let observer = scenePhaseObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
     
     func saveSubscriptionStatus(_ status: SubscriptionStatus) {
         // If the status hasn't changed, don't write to UserDefaults
@@ -55,6 +80,9 @@ class SubscriptionPersistence {
         cachedStatus = status
         lastExpiryCheck = Date()
         
+        // Save last verification time
+        defaults.setValue(Date(), forKey: lastVerificationKey)
+        
         // Batch write to UserDefaults
         defaults.setValue(statusString, forKey: subscriptionStatusKey)
         if let expiryDate {
@@ -70,6 +98,16 @@ class SubscriptionPersistence {
     }
     
     func loadSubscriptionStatus() -> SubscriptionStatus {
+        // Check if we need to force a refresh
+        if let lastVerification = defaults.object(forKey: lastVerificationKey) as? Date {
+            let timeSinceLastVerification = Date().timeIntervalSince(lastVerification)
+            if timeSinceLastVerification > 3600 { // Force refresh after 1 hour
+                print("SubscriptionPersistence: Last verification too old, forcing refresh")
+                lastExpiryCheck = nil
+                cachedStatus = nil
+            }
+        }
+        
         // Check if we have a cached status and if it's still valid
         if let lastCheck = lastExpiryCheck,
            Date().timeIntervalSince(lastCheck) < expiryCheckInterval,
@@ -99,37 +137,21 @@ class SubscriptionPersistence {
         case "annual":
             status = .annual(expiryDate: expiryDate)
         default:
-            status = SubscriptionStatus.notSubscribed
+            status = .notSubscribed
         }
         
-        // Update cache
         cachedStatus = status
         lastExpiryCheck = Date()
         return status
     }
     
     var isPremium: Bool {
-        // Use cached value if available and recently checked
-        if let lastCheck = lastExpiryCheck,
-           Date().timeIntervalSince(lastCheck) < expiryCheckInterval,
-           let cachedStatus = cachedStatus {
-            switch cachedStatus {
-            case .notSubscribed:
-                return false
-            case .monthly(let expiryDate), .annual(let expiryDate):
-                return expiryDate.map { $0 > Date() } ?? false
-            }
-        }
-        
         let status = loadSubscriptionStatus()
         switch status {
         case .notSubscribed:
             return false
-        case .monthly(let expiryDate), .annual(let expiryDate):
-            guard let expiryDate else { return false }
-            let isValid = expiryDate > Date()
-            print("SubscriptionPersistence: Checking premium status - Expiry: \(expiryDate), Is Valid: \(isValid)")
-            return isValid
+        case .monthly, .annual:
+            return true
         }
     }
 }

@@ -37,8 +37,7 @@ struct Powerful_ReportsApp: App {
                             .environmentObject(viewModel)
                             .environmentObject(authModel)
                             .environment(subscriptionStatusModel)
-                        
-                        
+                            .handleSubscriptionRefresh()
                             .subscriptionStatusTask(for: subscriptionIDs.group) { taskStatus in
                                 self.status = await taskStatus.map { statuses in
                                     await ProductSubscription.shared.status(
@@ -58,13 +57,11 @@ struct Powerful_ReportsApp: App {
                                 }
                             }
                             .task {
-                                ProductSubscription.createSharedInstance()
                                 await ProductSubscription.shared.checkForUnfinishedTransactions()
                                 await ProductSubscription.shared.observeTransactionUpdates()
                             }
-                          
                     } else {
-                        SignInWithApple()
+                        LoginRegView()
                             .environmentObject(authModel)
                     }
                 } else {
@@ -115,28 +112,29 @@ struct SplashScreen: View {
             // Use cached gradient
             gradient
                 .ignoresSafeArea()
-                .drawingGroup() // Use Metal for rendering
             
             // Optimize image loading and animation
             Image("logo_clear")
-                .font(.system(size: 50))
+                .resizable()
+                .scaledToFit()
+                .frame(width: 200, height: 200)
                 .opacity(opacity)
                 .scaleEffect(scale)
-                .drawingGroup() // Use Metal for rendering
         }
         .onAppear {
-            withAnimation(.spring(
-                response: 0.8,
-                dampingFraction: 0.7
-            )) {
-                scale = 0.9
-                opacity = 1.0
+            // Initial animation
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.6)) {
+                self.scale = 1.0
             }
             
-            // Transition timing
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            withAnimation(.easeIn(duration: 0.4)) {
+                self.opacity = 1.0
+            }
+            
+            // Trigger the transition after animation
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                 withAnimation(.easeOut(duration: 0.3)) {
-                    isActive = true
+                    self.isActive = true
                 }
             }
         }

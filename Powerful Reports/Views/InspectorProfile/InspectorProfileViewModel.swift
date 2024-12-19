@@ -4,7 +4,7 @@ import Charts
 
 @MainActor
 final class InspectorProfileViewModel: ObservableObject {
-    let profile: InspectorProfile
+    @Published var profile: InspectorProfile
     let reports: [Report]
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -12,39 +12,56 @@ final class InspectorProfileViewModel: ObservableObject {
         return formatter
     }()
     
-    @Published private(set) var recentReports: [Report] = []
+    @Published var recentReports: [Report]
     @Published var themeStatistics: ThemeStatistics
+    @Published var themeAnalytics: ThemeAnalyzer.InspectorThemeAnalytics?
     @Published private(set) var sortedGrades: [(key: String, value: Int)] = []
     @Published private(set) var areas: [String] = []
-    @Published private(set) var themeAnalytics: ThemeAnalyzer.InspectorThemeAnalytics?
+    @Published var totalInspections: Int = 0
+    @Published private(set) var isLoadingThemes: Bool = false
     
     init(profile: InspectorProfile, reports: [Report]) {
         self.profile = profile
         self.reports = reports
         self.themeStatistics = ThemeStatistics(total: 0, topThemes: [], percentages: [:])
-        loadData()
-    }
-    
-    private func loadData() {
-        // Recent Reports
-        recentReports = reports
+        
+        let filteredReports = reports
             .filter { $0.inspector == profile.name }
             .sorted { report1, report2 in
-                let date1 = dateFormatter.date(from: report1.date) ?? Date.distantPast
-                let date2 = dateFormatter.date(from: report2.date) ?? Date.distantPast
+                let formatter = DateFormatter()
+                formatter.dateFormat = "dd/MM/yyyy"
+                let date1 = formatter.date(from: report1.date) ?? Date.distantPast
+                let date2 = formatter.date(from: report2.date) ?? Date.distantPast
                 return date1 > date2
             }
+        self.recentReports = filteredReports
         
-        // Theme Statistics
-        themeStatistics = ThemeAnalyzer.getInspectorThemeStatistics(from: reports, for: profile.name)
+        calculateStats()
+    }
+    
+    func loadThemeAnalytics() async {
+        guard themeAnalytics == nil else { return }
         
-        // Theme Analytics
-        themeAnalytics = ThemeAnalyzer.calculateInspectorThemeAnalytics(from: reports, for: profile.name)
+        isLoadingThemes = true
+        defer { isLoadingThemes = false }
         
-        // Sorted Grades
-        sortedGrades = profile.grades.sorted(by: { $0.value > $1.value })
+        await Task.yield()
+        self.themeAnalytics = await ThemeAnalyzer.calculateInspectorThemeAnalytics(from: reports, for: profile.name)
+    }
+    
+    private func calculateStats() {
+        totalInspections = recentReports.count
         
-        // Areas
+        var gradeCount: [String: Int] = [:]
+        for report in recentReports {
+            if let overallRating = report.ratings.first(where: { $0.category == "Overall effectiveness" })?.rating {
+                gradeCount[overallRating, default: 0] += 1
+            } else {
+                gradeCount[report.outcome, default: 0] += 1
+            }
+        }
+        sortedGrades = gradeCount.sorted { $0.key < $1.key }
+        
         areas = Array(profile.areas.keys.sorted())
     }
     
@@ -53,8 +70,8 @@ final class InspectorProfileViewModel: ObservableObject {
     }
     
     func calculatePercentage(_ count: Int) -> Int {
-        guard profile.totalInspections > 0 else { return 0 }
-        return Int(round(Double(count) / Double(profile.totalInspections) * 100))
+        guard totalInspections > 0 else { return 0 }
+        return Int(round(Double(count) / Double(totalInspections) * 100))
     }
     
     func generatePDF() -> URL? {

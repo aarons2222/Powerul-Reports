@@ -78,7 +78,7 @@ struct ThemesView: View {
             ScrollView {
                 Spacer()
                     .frame(height: 20)
-                LazyVStack(spacing: 0) {
+                LazyVStack(spacing: 16) {
                     ForEach(Array(themeGroups.enumerated()), id: \.1.id) { index, group in
                         ThemeCardView(
                             group: group,
@@ -97,6 +97,7 @@ struct ThemesView: View {
                 }
          
             }
+            .padding(.horizontal)
         }
         .ignoresSafeArea()
         .navigationBarHidden(true)

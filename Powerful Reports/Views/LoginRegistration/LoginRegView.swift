@@ -161,7 +161,7 @@ struct LoginRegView: View {
                                     }
                                 }
                             )
-                            .onChange(of: password) { _ in
+                            .onChange(of: password) {
                                 updatePasswordRequirements()
                             }
                             .offset(y: isSignUp ? -20 : 0)
@@ -193,7 +193,7 @@ struct LoginRegView: View {
                             .submitLabel(.go)
                             .onSubmit(handleSignUp)
                             .disabled(false)
-                            .onChange(of: confirmPassword) { _ in
+                            .onChange(of: confirmPassword) { 
                                 updatePasswordRequirements()
                             }
                             .offset(y: isSignUp ? -10 : 0)

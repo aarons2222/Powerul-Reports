@@ -8,19 +8,25 @@ import Foundation
 import StoreKit
 
 actor ProductSubscription {
+    static let shared = ProductSubscription()
+    
     private init() {
         print("ProductSubscription: Instance initialized")
+        Task {
+            await publicRefreshSubscriptionStatus()
+        }
     }
     
-    private(set) static var shared: ProductSubscription!
-        
-    static func createSharedInstance() {
-        print("ProductSubscription: Creating shared instance")
-        shared = ProductSubscription()
+    public func publicRefreshSubscriptionStatus() async {
+        print("ProductSubscription: Refreshing subscription status")
+  
+            for await result in Transaction.currentEntitlements {
+                await process(transaction: result)
+            }
     }
     
     // Subscription Only Handle Here.
-    func status(for statuses: [Product.SubscriptionInfo.Status], ids: SubscriptionIdentifiers) -> SubscriptionStatus {
+    func status(for statuses: [Product.SubscriptionInfo.Status], ids: SubscriptionIdentifiers) async -> SubscriptionStatus {
         print("ProductSubscription: Checking status for \(statuses.count) status(es)")
         
         let effectiveStatus = statuses.max { lhs, rhs in
@@ -38,7 +44,7 @@ actor ProductSubscription {
         guard let effectiveStatus else {
             print("ProductSubscription: No effective status found")
             let status = SubscriptionStatus.notSubscribed
-            Task { @MainActor in
+            await MainActor.run {
                  SubscriptionPersistence.shared.saveSubscriptionStatus(status)
             }
             return status
@@ -49,16 +55,19 @@ actor ProductSubscription {
         case .verified(let t):
             print("ProductSubscription: Transaction verified for product: \(t.productID)")
             transaction = t
-        case .unverified(_, let error):
+        case .unverified(let t, let error):
             print("ProductSubscription: Transaction verification failed: \(error)")
-            let status = SubscriptionStatus.notSubscribed
-            
-            Task { @MainActor in
-                 SubscriptionPersistence.shared.saveSubscriptionStatus(status)
+            // Retry verification once before giving up
+            if let verifiedTransaction = await retryVerification(transaction: t) {
+                transaction = verifiedTransaction
+            } else {
+                let status = SubscriptionStatus.notSubscribed
+                await MainActor.run {
+                     SubscriptionPersistence.shared.saveSubscriptionStatus(status)
+                }
+                return status
             }
-            return status
         }
-        
         
         // Check if the subscription has expired
         if let expirationDate = transaction.expirationDate {
@@ -66,7 +75,7 @@ actor ProductSubscription {
             if expirationDate <= Date() {
                 print("ProductSubscription: Subscription has expired")
                 let status = SubscriptionStatus.notSubscribed
-                Task { @MainActor in
+                await MainActor.run {
                      SubscriptionPersistence.shared.saveSubscriptionStatus(status)
                 }
                 return status
@@ -80,18 +89,39 @@ actor ProductSubscription {
         ) else {
             print("ProductSubscription: Could not create subscription status")
             let status = SubscriptionStatus.notSubscribed
-            Task { @MainActor in
+            await MainActor.run {
                  SubscriptionPersistence.shared.saveSubscriptionStatus(status)
             }
             return status
         }
         
         print("ProductSubscription: Returning subscription status: \(subscriptionStatus)")
-        // Batch the status update with any other pending updates
-        Task { @MainActor in
+        await MainActor.run {
              SubscriptionPersistence.shared.saveSubscriptionStatus(subscriptionStatus)
         }
         return subscriptionStatus
+    }
+    
+    private func retryVerification(transaction: Transaction) async -> Transaction? {
+        print("ProductSubscription: Retrying verification for transaction \(transaction.id)")
+        do {
+            // Add a small delay before retrying
+            try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+            let result = await Transaction.latest(for: String(transaction.id))
+            switch result {
+            case .verified(let transaction):
+                return transaction
+            case .unverified(_, let error):
+                print("ProductSubscription: Retry verification failed: \(error)")
+                return nil
+            @unknown default:
+                print("ProductSubscription: Unknown verification result")
+                return nil
+            }
+        } catch {
+            print("ProductSubscription: Error during retry verification: \(error)")
+            return nil
+        }
     }
 }
 
