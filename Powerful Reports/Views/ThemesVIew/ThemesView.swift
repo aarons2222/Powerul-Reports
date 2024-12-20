@@ -17,7 +17,6 @@ struct ProcessedThemeGroup: Identifiable {
 struct ThemesView: View {
     private let themeGroups: [ProcessedThemeGroup]
     @State private var expandedId: UUID? = nil
-    @State private var selectedTheme: String? = nil
     @State private var animateCards = false
     
     init(themes: [(String, Double)]) {
@@ -83,7 +82,6 @@ struct ThemesView: View {
                         ThemeCardView(
                             group: group,
                             isExpanded: expandedId == group.id,
-                            selectedTheme: $selectedTheme,
                             index: index,
                             totalCount: themeGroups.count
                         )
@@ -97,6 +95,7 @@ struct ThemesView: View {
                 }
          
             }
+            .scrollIndicators(.hidden)
             .padding(.horizontal)
         }
         .ignoresSafeArea()
@@ -112,7 +111,6 @@ struct ThemesView: View {
 struct ThemeCardView: View {
     let group: ProcessedThemeGroup
     let isExpanded: Bool
-    @Binding var selectedTheme: String?
     let index: Int
     let totalCount: Int
     @State private var showProgress = false
@@ -164,20 +162,14 @@ struct ThemeCardView: View {
                 // Themes Grid
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150))], spacing: 12) {
                     ForEach(group.themes, id: \.self) { theme in
-                        Button(action: {
-                            withAnimation {
-                                selectedTheme = selectedTheme == theme ? nil : theme
-                            }
-                        }) {
+                  
                             Text(theme)
                                 .font(.subheadline)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 8)
                                 .cardBackground()
-                                .foregroundColor(selectedTheme == theme ? .color1 : .primary)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        .transition(.scale.combined(with: .opacity))
+                                .foregroundColor(.primary)
+                
                     }
                 }
                 .padding(.top, 8)
@@ -185,8 +177,6 @@ struct ThemeCardView: View {
         }
         .padding()
         .cardBackground()
-        .scaleEffect(selectedTheme != nil && !group.themes.contains(selectedTheme!) ? 0.95 : 1.0)
-        .opacity(selectedTheme != nil && !group.themes.contains(selectedTheme!) ? 0.7 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedTheme)
+    
     }
 }
