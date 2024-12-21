@@ -1,5 +1,6 @@
 //
-//  AreaProfileView.swift
+//  Authority
+
 //  Powerful Reports
 //
 //  Created by Aaron Strickland on 19/11/2024.
@@ -8,17 +9,17 @@
 import SwiftUI
 import Charts
 
-struct AreaView: View {
-    let area: AreaProfile
+struct AuthorityView: View {
+    let authority: AuthorityProfile
     let reports: [Report]
     
     @State private var animationPercent = 0.0
 
     var gradePercentages: [(grade: String, count: Int, percent: Int)] {
-          let totalCount = area.grades.values.reduce(0, +)
+          let totalCount = authority.grades.values.reduce(0, +)
           guard totalCount > 0 else { return [] }
           
-          return area.grades.sorted(by: { $0.key < $1.key }).map { grade, count in
+          return authority.grades.sorted(by: { $0.key < $1.key }).map { grade, count in
               let percentage = (Double(count) / Double(totalCount)) * 100
               return (grade: grade, count: count, percent: Int(round(percentage)))
           }
@@ -40,9 +41,9 @@ struct AreaView: View {
        let inspectorReports = reports.filter { $0.inspector == name }
        print("Found \(inspectorReports.count) reports")
        
-       let areas = Dictionary(grouping: inspectorReports) { $0.localAuthority }
+       let authorities = Dictionary(grouping: inspectorReports) { $0.localAuthority }
            .mapValues { $0.count }
-       print("Areas covered: \(areas)")
+       print("Areas covered: \(authorities)")
        
        var allGrades: [String: Int] = [:]
        
@@ -60,29 +61,29 @@ struct AreaView: View {
        return InspectorProfile(
            name: name,
            totalInspections: inspectorReports.count,
-           areas: areas,
+           authorities: authorities,
            grades: allGrades
        )
     }
     
     @Binding var path: [NavigationPath]
     
-    init(area: AreaProfile, reports: [Report], path: Binding<[NavigationPath]>){
-        self.area = area
+    init(authority: AuthorityProfile, reports: [Report], path: Binding<[NavigationPath]>){
+        self.authority = authority
         self.reports = reports
         self._path = path
-        print("Logger: AreaView")
+        print("Logger: Authority View")
     }
     
     
 
  
     var body: some View {
-        let statistics = ThemeAnalyzer.getThemeStatistics(from: reports, for: area.name)
+        let statistics = ThemeAnalyzer.getThemeStatistics(from: reports, for: authority.name)
 
 
         VStack(spacing: 0){
-            CustomHeaderVIew(title: area.name)
+            CustomHeaderVIew(title: authority.name)
         ScrollView {
             
             Color.clear.frame(height: 20)
@@ -135,11 +136,11 @@ struct AreaView: View {
                 // Provision Types Card
                 CustomCardView("Provider Types") {
                     VStack(alignment: .leading, spacing: 8) {
-                        ForEach(Array(area.provisionTypes.keys.sorted()), id: \.self) { type in
+                        ForEach(Array(authority.provisionTypes.keys.sorted()), id: \.self) { type in
                             HStack {
                                 Text(type)
                                 Spacer()
-                                Text("\(area.provisionTypes[type, default: 0])")
+                                Text("\(authority.provisionTypes[type, default: 0])")
                                     .foregroundColor(.gray)
                             }
                         }
@@ -164,7 +165,7 @@ struct AreaView: View {
                 CustomCardView("Inspectors") {
                     VStack(alignment: .leading, spacing: 8) {
                         
-                        ForEach(Array(area.inspectors.sorted(by: { $0.key < $1.key })), id: \.key) { inspector, count in
+                        ForEach(Array(authority.inspectors.sorted(by: { $0.key < $1.key })), id: \.key) { inspector, count in
                             Button {
                                 path.append(.inspectorProfile(inspector))
                             } label: {

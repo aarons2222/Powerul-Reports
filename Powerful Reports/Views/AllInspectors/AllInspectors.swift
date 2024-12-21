@@ -11,7 +11,7 @@ struct InspectorProfile: Identifiable {
     let id = UUID()
     let name: String
     let totalInspections: Int
-    let areas: [String: Int]
+    let authorities: [String: Int]
     let grades: [String: Int]
 }
 struct AllInspectors: View {
@@ -25,7 +25,7 @@ struct AllInspectors: View {
     private func getInspectorProfile(name: String) -> InspectorProfile {
         let inspectorReports = reports.filter { $0.inspector == name }
         
-        let areas = Dictionary(grouping: inspectorReports) { $0.localAuthority }
+        let authorities = Dictionary(grouping: inspectorReports) { $0.localAuthority }
             .mapValues { $0.count }
         
         var allGrades: [String: Int] = [:]
@@ -43,7 +43,7 @@ struct AllInspectors: View {
         return InspectorProfile(
             name: name,
             totalInspections: inspectorReports.count,
-            areas: areas,
+            authorities: authorities,
             grades: allGrades
         )
     }
@@ -68,9 +68,9 @@ struct AllInspectors: View {
             return groupedInspectorData
         }
         
-        let filteredData = groupedInspectorData.flatMap { _, areas in
-            areas.filter { area in
-                area.name.localizedCaseInsensitiveContains(searchText)
+        let filteredData = groupedInspectorData.flatMap { _, authorities in
+            authorities.filter { authority in
+                authority.name.localizedCaseInsensitiveContains(searchText)
             }
         }
         

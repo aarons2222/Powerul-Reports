@@ -88,8 +88,8 @@ struct InspectorProfileView: View {
     private var localAuthoritiesSection: some View {
         CustomCardView("Local Authorities Inspected") {
             LazyVStack(alignment: .leading, spacing: 8) {
-                ForEach(viewModel.areas, id: \.self) { area in
-                    LabeledContent(area, value: "\(viewModel.areaCount(area))")
+                ForEach(viewModel.authorities, id: \.self) { authority in
+                    LabeledContent(authority, value: "\(viewModel.authorityCount(authority))")
                 }
             }
         }

@@ -298,11 +298,12 @@ struct HomeView: View {
                                        
                         
                         
-                        /// all areas
+                        
                                        Button {
-                                           path.append(.areas)
+                                           path.append(.authorities)
                                        } label: {
-                                           TopAreasCard(reports: viewModel.filteredReports)
+                                           
+                                           TopAuthoritiesCard(reports: viewModel.filteredReports)
                                                .padding(.bottom)
                                        }
                                        .buttonStyle(PlainButtonStyle())
@@ -389,8 +390,8 @@ struct HomeView: View {
                         AllInspectors(reports: viewModel.reports, path: $path)
                             .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.inspector, in: hero))
                    
-                    case .areas:
-                        AllAreas(reports: viewModel.reports, path: $path)
+                    case .authorities:
+                        AllAuthorities(reports: viewModel.reports, path: $path)
                             .navigationTransition(.zoom(sourceID: viewModel.filteredReports.first?.localAuthority, in: hero))
                     case .themes:
                         let themeData = viewModel.getThemeAnalysis()
@@ -412,8 +413,8 @@ struct HomeView: View {
                     case .inspectorProfile(let name):
                         InspectorProfileView(profile: getInspectorProfile(name: name), reports: viewModel.reports, path: $path)
                         
-                    case .areaProfile(let name):
-                        AreaView(area: getAreaProfile(name: name), reports: viewModel.reports, path: $path)
+                    case .authorityProfile(let name):
+                        AuthorityView(authority: getAuthorityProfile(name: name), reports: viewModel.reports, path: $path)
                     
                     
                     
@@ -554,7 +555,7 @@ struct HomeView: View {
     private func getInspectorProfile(name: String) -> InspectorProfile {
         let inspectorReports = viewModel.reports.filter { $0.inspector == name }
         
-        let areas = Dictionary(grouping: inspectorReports) { $0.localAuthority }
+        let authorities = Dictionary(grouping: inspectorReports) { $0.localAuthority }
             .mapValues { $0.count }
         
         var allGrades: [String: Int] = [:]
@@ -572,23 +573,23 @@ struct HomeView: View {
         return InspectorProfile(
             name: name,
             totalInspections: inspectorReports.count,
-            areas: areas,
+            authorities: authorities,
             grades: allGrades
         )
     }
     
     
     
-    private func getAreaProfile(name: String) -> AreaProfile {
-        let areaReports = viewModel.reports.filter { $0.localAuthority == name }
+    private func getAuthorityProfile(name: String) -> AuthorityProfile {
+        let authorityReports = viewModel.reports.filter { $0.localAuthority == name }
         
-        let inspectors = Dictionary(grouping: areaReports) { $0.inspector }
+        let inspectors = Dictionary(grouping: authorityReports) { $0.inspector }
             .mapValues { $0.count }
         
         var allGrades: [String: Int] = [:]
         
         // Count overall effectiveness ratings and outcomes
-        areaReports.forEach { report in
+        authorityReports.forEach { report in
             if let overallRating = report.ratings.first(where: { $0.category == RatingCategory.overallEffectiveness.rawValue }) {
                 allGrades[overallRating.rating, default: 0] += 1
             } else {
@@ -599,12 +600,12 @@ struct HomeView: View {
         }
         
         
-        let provisionTypes = Dictionary(grouping: areaReports) { $0.typeOfProvision }
+        let provisionTypes = Dictionary(grouping: authorityReports) { $0.typeOfProvision }
             .mapValues { $0.count }
         
         // Calculate themes
         var themeCounts: [String: Int] = [:]
-        areaReports.forEach { report in
+        authorityReports.forEach { report in
             report.themes.forEach { theme in
                 themeCounts[theme.topic, default: 0] += theme.frequency
             }
@@ -612,9 +613,9 @@ struct HomeView: View {
         let sortedThemes = themeCounts.map { (topic: $0.key, frequency: $0.value) }
             .sorted { $0.frequency > $1.frequency }
         
-        return AreaProfile(
+        return AuthorityProfile(
             name: name,
-            totalInspections: areaReports.count,
+            totalInspections: authorityReports.count,
             inspectors: inspectors,
             grades: allGrades,
             provisionTypes: provisionTypes,
@@ -641,8 +642,8 @@ enum NavigationPath: Hashable {
     case annualStats
     case inspectors
     case inspectorProfile(String)
-    case areaProfile(String)
-    case areas
+    case authorityProfile(String)
+    case authorities
     case themes
     case provisionInformation
     case allReports

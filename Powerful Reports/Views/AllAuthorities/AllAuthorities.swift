@@ -1,5 +1,5 @@
 //
-//  AllAreas.swift
+//  AllAuthorities.swift
 //  Powerful Reports
 //
 //  Created by Aaron Strickland on 19/11/2024.
@@ -8,7 +8,7 @@
 import SwiftUI
 import UIKit
 
-struct AreaProfile: Identifiable {
+struct AuthorityProfile: Identifiable {
     let id = UUID()
     let name: String
     let totalInspections: Int
@@ -18,13 +18,13 @@ struct AreaProfile: Identifiable {
     let themes: [(topic: String, frequency: Int)]  // Added themes
 }
 
-struct AreaInformation: Identifiable {
+struct AuthorityInformation: Identifiable {
     let id = UUID()
     let name: String
     let count: Int
 }
 
-struct AllAreas: View {
+struct AllAuthorities: View {
     let reports: [Report]
     
     @Environment(\.dismiss) private var presentationMode
@@ -33,28 +33,28 @@ struct AllAreas: View {
     private let startColor: Color = .color2
     private let endColor: Color = .color1
     
-    private var groupedAreaData: [String: [AreaInformation]] {
-        let areaCounts = Dictionary(grouping: reports) { $0.localAuthority }
+    private var groupedAuthorityData: [String: [AuthorityInformation]] {
+        let authorityCounts = Dictionary(grouping: reports) { $0.localAuthority }
             .mapValues { $0.count }
             .filter { !$0.key.isEmpty }
         
-        let areaData = areaCounts.sorted { $0.value > $1.value }
-            .map { AreaInformation(name: $0.key, count: $0.value) }
+        let authorityData = authorityCounts.sorted { $0.value > $1.value }
+            .map { AuthorityInformation(name: $0.key, count: $0.value) }
         
-        return Dictionary(grouping: areaData) {
+        return Dictionary(grouping: authorityData) {
             String($0.name.prefix(1)).uppercased()
         }
     }
     
     @State private var searchText = ""
-    private var filteredAreaData: [String: [AreaInformation]] {
+    private var filteredAuthorityData: [String: [AuthorityInformation]] {
         if searchText.isEmpty {
-            return groupedAreaData
+            return groupedAuthorityData
         }
         
-        let filteredData = groupedAreaData.flatMap { _, areas in
-            areas.filter { area in
-                area.name.localizedCaseInsensitiveContains(searchText)
+        let filteredData = groupedAuthorityData.flatMap { _, authorities in
+            authorities.filter { authority in
+                authority.name.localizedCaseInsensitiveContains(searchText)
             }
         }
         
@@ -81,7 +81,7 @@ struct AllAreas: View {
                  SearchBar(searchText: $searchText, placeHolder: "Search \(Set(reports.map { $0.localAuthority }).count) Local Authorities...")
                  
                  
-                 if filteredAreaData.isEmpty {
+                 if filteredAuthorityData.isEmpty {
                      
                      HStack {
                          Spacer()
@@ -90,7 +90,7 @@ struct AllAreas: View {
                            
                              
                              
-                             Text("Area not found")
+                             Text("Authority not found")
                                  .font(.title)
                                  .foregroundStyle(.color2)
                          }
@@ -107,13 +107,13 @@ struct AllAreas: View {
                      ScrollView {
                          
                          LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
-                             ForEach(Array(filteredAreaData.keys.sorted()), id: \.self) { letter in
-                                 if let areas = filteredAreaData[letter]?.sorted(by: { $0.name < $1.name }) {
+                             ForEach(Array(filteredAuthorityData.keys.sorted()), id: \.self) { letter in
+                                 if let authorities = filteredAuthorityData[letter]?.sorted(by: { $0.name < $1.name }) {
                                      Section {
-                                         ForEach(Array(zip(areas.indices, areas)), id: \.1.id) { index, item in
+                                         ForEach(Array(zip(authorities.indices, authorities)), id: \.1.id) { index, item in
                                              
                                              Button {
-                                                 path.append(.areaProfile(item.name))
+                                                 path.append(.authorityProfile(item.name))
                                              } label: {
                                                  
                                                  AllCard(title: item.name, count: item.count)

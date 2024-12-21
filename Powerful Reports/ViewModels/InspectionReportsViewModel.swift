@@ -459,7 +459,7 @@ class InspectionReportsViewModel: ObservableObject {
     func getInspectorProfile(name: String) -> InspectorProfile {
         let inspectorReports = reportsByInspector[name] ?? []
         
-        let areas = Dictionary(grouping: inspectorReports) { $0.localAuthority }
+        let authorities = Dictionary(grouping: inspectorReports) { $0.localAuthority }
             .mapValues { $0.count }
         
         var allGrades: [String: Int] = [:]
@@ -477,7 +477,7 @@ class InspectionReportsViewModel: ObservableObject {
         return InspectorProfile(
             name: name,
             totalInspections: inspectorReports.count,
-            areas: areas,
+            authorities: authorities,
             grades: allGrades
         )
     }

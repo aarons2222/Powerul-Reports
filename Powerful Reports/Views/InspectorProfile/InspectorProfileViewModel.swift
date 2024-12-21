@@ -16,7 +16,7 @@ final class InspectorProfileViewModel: ObservableObject {
     @Published var themeStatistics: ThemeStatistics
     @Published var themeAnalytics: ThemeAnalyzer.InspectorThemeAnalytics?
     @Published private(set) var sortedGrades: [(key: String, value: Int)] = []
-    @Published private(set) var areas: [String] = []
+    @Published private(set) var authorities: [String] = []
     @Published var totalInspections: Int = 0
     @Published private(set) var isLoadingThemes: Bool = false
     
@@ -62,11 +62,11 @@ final class InspectorProfileViewModel: ObservableObject {
         }
         sortedGrades = gradeCount.sorted { $0.key < $1.key }
         
-        areas = Array(profile.areas.keys.sorted())
+        authorities = Array(profile.authorities.keys.sorted())
     }
     
-    func areaCount(_ area: String) -> Int {
-        profile.areas[area] ?? 0
+    func authorityCount(_ authority: String) -> Int {
+        profile.authorities[authority] ?? 0
     }
     
     func calculatePercentage(_ count: Int) -> Int {

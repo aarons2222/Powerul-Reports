@@ -17,9 +17,9 @@ class ThemeAnalyzer {
     static func analyzeThemes(from reports: [Report], for localAuthority: String) -> [ThemeFrequency] {
         var themeCounts: [String: Int] = [:]
         
-        let areaReports = reports.filter { $0.localAuthority == localAuthority }
+        let authorityReports = reports.filter { $0.localAuthority == localAuthority }
         
-        for report in areaReports {
+        for report in authorityReports {
             for theme in report.themes {
                 themeCounts[theme.topic, default: 0] += 1
             }
@@ -32,8 +32,8 @@ class ThemeAnalyzer {
         return sortedThemes
     }
     
-    static func getThemeStatistics(from reports: [Report], for areaId: String) -> ThemeStatistics {
-        let themeFrequencies = analyzeThemes(from: reports, for: areaId)
+    static func getThemeStatistics(from reports: [Report], for authorityId: String) -> ThemeStatistics {
+        let themeFrequencies = analyzeThemes(from: reports, for: authorityId)
         let totalThemeOccurrences = themeFrequencies.reduce(0) { $0 + $1.count }
         
         var percentages: [String: Double] = [:]
