@@ -10,7 +10,7 @@ struct AuthorityThemeAnalyticsView: View {
     @State private var showingThemesInfo = false
     @State private var selectedPercentageRange = PercentageRange.all
     @State private var selectedRating: String = "All"
-    @State private var selectedLocation: String? = nil
+    @State private var selectedInspector: String? = nil
     @State private var showMetOnly = false
     @State private var showCorrelationInfo = false
     
@@ -76,7 +76,7 @@ struct AuthorityThemeAnalyticsView: View {
         let result = viewModel.filteredCorrelations(
             percentageRange: selectedPercentageRange,
             rating: selectedRating,
-            location: selectedLocation,
+            location: selectedInspector,
             showMetOnly: showMetOnly
         )
         return result.correlations
@@ -86,14 +86,14 @@ struct AuthorityThemeAnalyticsView: View {
         let result = viewModel.filteredCorrelations(
             percentageRange: selectedPercentageRange,
             rating: selectedRating,
-            location: selectedLocation,
+            location: selectedInspector,
             showMetOnly: showMetOnly
         )
         return result.themes
     }
     
-    var uniqueLocations: [String] {
-        Array(viewModel.uniqueLocations).sorted()
+    var uniqueInspectors: [String] {
+        Array(viewModel.uniqueInspectors).sorted()
     }
     
     let ratingValues: [RatingValue] = [.outstanding, .good, .met, .requiresImprovement, .inadequate, .notmet]
@@ -232,16 +232,16 @@ struct AuthorityThemeAnalyticsView: View {
                                         .background(Capsule().fill(.color0.opacity(0.2)))
                                     }
                                     
-                                    if !uniqueLocations.isEmpty {
+                                    if !uniqueInspectors.isEmpty {
                                         Menu {
-                                            Button("All Locations", action: { selectedLocation = nil })
-                                            ForEach(uniqueLocations.sorted(), id: \.self) { location in
+                                            Button("All Inspectors", action: { selectedInspector = nil })
+                                            ForEach(uniqueInspectors.sorted(), id: \.self) { inspector in
                                                 Button(action: {
-                                                    selectedLocation = location
+                                                    selectedInspector = inspector
                                                 }) {
                                                     HStack {
-                                                        Text(location)
-                                                        if location == selectedLocation {
+                                                        Text(inspector)
+                                                        if inspector == selectedInspector {
                                                             Image(systemName: "checkmark")
                                                         }
                                                     }
@@ -251,7 +251,7 @@ struct AuthorityThemeAnalyticsView: View {
                                             HStack {
                                                 Image(systemName: "person.circle")
                                                     .foregroundStyle(.color2)
-                                                Text(selectedLocation ?? "Inspector")
+                                                Text(selectedInspector ?? "Inspectors")
                                                     .foregroundStyle(.color4)
                                             }
                                             .padding(.horizontal, 12)

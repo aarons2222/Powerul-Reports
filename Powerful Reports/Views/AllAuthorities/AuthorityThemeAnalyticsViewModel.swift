@@ -2,7 +2,7 @@ import SwiftUI
 
 class AuthorityThemeAnalyticsViewModel: ObservableObject {
     let analytics: ThemeAnalyzer.AuthorityThemeAnalytics
-    var uniqueLocations: Set<String> = []
+    var uniqueInspectors: Set<String> = []
     
     // Available options based on authority data
     var availableRatings: [String] {
@@ -15,7 +15,7 @@ class AuthorityThemeAnalyticsViewModel: ObservableObject {
     
     init(analytics: ThemeAnalyzer.AuthorityThemeAnalytics) {
         self.analytics = analytics
-        self.uniqueLocations = analytics.inspectors // Using inspectors instead of locations for authorities
+        self.uniqueInspectors = analytics.inspectors // Using inspectors instead of locations for authorities
     }
     
     func filteredCorrelations(
