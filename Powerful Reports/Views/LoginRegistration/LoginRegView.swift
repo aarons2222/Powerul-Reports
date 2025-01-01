@@ -103,28 +103,36 @@ struct LoginRegView: View {
                         Spacer()
                     }
                     
-                    Spacer(minLength: 40)
-                    
-                    // Logo and Title
-                    VStack(spacing: 20) {
-                        Image("logo_clear")
-                            .resizable()
-                            .frame(width: 120, height: 120)
-                            .drawingGroup()
-                            .shadow(radius: 10)
-                        
-                        Text(isSignUp ? "Create Account" : "Welcome Back")
-                            .font(.system(size: 32, weight: .regular))
-                            .foregroundColor(.primary)
-                            .animation(.easeInOut(duration: 0.3), value: isSignUp)
-                            .transition(.asymmetric(
-                                insertion: .opacity.combined(with: .scale(scale: 0.95)).animation(.easeInOut(duration: 0.3)),
-                                removal: .opacity.combined(with: .scale(scale: 1.05)).animation(.easeInOut(duration: 0.3))
-                            ))
-                            .id(isSignUp)
+                    GeometryReader { geometry in
+                        VStack {
+                            Spacer(minLength: 40)
+                            
+                            // Logo and Title
+                            VStack(spacing: 20) {
+                                Image("logo_clear")
+                                    .resizable()
+                                    .frame(width: 120, height: 120)
+                                    .drawingGroup()
+                                    .shadow(radius: 10)
+                                
+                                Text(isSignUp ? "Create Account" : "Welcome Back")
+                                    .font(.system(size: 32, weight: .regular))
+                                    .foregroundColor(.primary)
+                                    .animation(.easeInOut(duration: 0.3), value: isSignUp)
+                                    .transition(.asymmetric(
+                                        insertion: .opacity.combined(with: .scale(scale: 0.95)).animation(.easeInOut(duration: 0.3)),
+                                        removal: .opacity.combined(with: .scale(scale: 1.05)).animation(.easeInOut(duration: 0.3))
+                                    ))
+                                    .id(isSignUp)
+                            }
+                            .offset(y: isSignUp ? -40 : 0)
+                            .animation(.spring(response: 0.5, dampingFraction: 0.9), value: isSignUp)
+                            
+                            Spacer()
+                        }
+                        .frame(height: geometry.size.height)
                     }
-                    .offset(y: isSignUp ? -40 : 0)
-                    .animation(.spring(response: 0.5, dampingFraction: 0.9), value: isSignUp)
+                    .frame(height: 200)
                     
                     // Form fields
                     VStack(spacing: 20) {
@@ -277,11 +285,11 @@ struct LoginRegView: View {
         
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, keyboardHeight + 20)
+                .padding(.bottom, keyboardHeight)
             }
             .scrollDismissesKeyboard(.immediately)
         }
-        .offset(y: -keyboardHeight/2)
+        .offset(y: -keyboardHeight/3)
         .animation(.easeOut(duration: 0.16), value: keyboardHeight)
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .navigationBarHidden(true)
@@ -365,28 +373,49 @@ struct LoginRegView: View {
     }
     
     private func handleSignUp() {
-        Task{
+        Task {
             let emailTrimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
             
             // Validate email
             if emailTrimmed.isEmpty {
-                errorMessage = "Email is required"
+                toastMessage = "Email is required"
+                withAnimation {
+                    showToast = true
+                }
                 return
             }
             
             // Validate password
             let validation = passwordValidation
             if !validation.isValid {
-                errorMessage = validation.message
+                toastMessage = "Please ensure all password requirements are met"
+                withAnimation {
+                    showToast = true
+                }
                 return
             }
             
-            let success = await authModel.signUp(email: email, password: password)
-            
-            if success {
-                toastMessage = "Verification code sent to \(email)"
+            do {
+                let success = try await authModel.signUp(email: email, password: password)
+                
+                if success {
+                    toastMessage = "Verification email sent to \(email)"
+                    withAnimation {
+                        showVerificationToast = true
+                    }
+                    
+                    // Clear fields and switch to sign in mode after a delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        email = ""
+                        password = ""
+                        confirmPassword = ""
+                        isSignUp = false
+                    }
+                }
+            } catch {
+                toastMessage = "Failed to create account. Please try again."
                 withAnimation {
-                    showVerificationToast = true
+                    showToast = true
                 }
             }
         }

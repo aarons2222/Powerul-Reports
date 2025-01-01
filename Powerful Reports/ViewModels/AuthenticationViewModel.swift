@@ -180,7 +180,7 @@ class AuthenticationViewModel: ObservableObject {
         }
     }
     
-    func signUp(email: String, password: String) async -> Bool {
+    func signUp(email: String, password: String) async throws -> Bool {
         errorMessage = ""
         
         do {
@@ -191,7 +191,7 @@ class AuthenticationViewModel: ObservableObject {
             try await result.user.sendEmailVerification()
             
             // Immediately sign out
-            try Auth.auth().signOut()
+            try? Auth.auth().signOut()
             
             // Reset states
             await MainActor.run {
@@ -203,9 +203,9 @@ class AuthenticationViewModel: ObservableObject {
         } catch {
             // Handle errors
             await MainActor.run {
-                handleAuthError(error)
+                self.errorMessage = error.localizedDescription
             }
-            return false
+            throw error
         }
     }
 
@@ -320,7 +320,8 @@ class AuthenticationViewModel: ObservableObject {
             try await user.sendEmailVerification(beforeUpdatingEmail: newEmail)
             return (true, "A verification email has been sent to the new email address. Please verify it to complete the update.")
         } catch {
-            return (false, error.localizedDescription)
+            handleAuthError(error)
+            return (false, errorMessage)
         }
 
     }

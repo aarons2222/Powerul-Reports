@@ -332,7 +332,7 @@ struct HomeView: View {
                         
                                      
                                    }
-                                   .padding()
+                                   .padding(.horizontal)
                                    .scrollIndicators(.hidden)
                     
                 }
