@@ -12,7 +12,7 @@ import Charts
 struct AuthorityView: View {
     let authority: AuthorityProfile
     let reports: [Report]
-    
+    @State private var themeAnalytics: ThemeAnalyzer.AuthorityThemeAnalytics?
     @State private var animationPercent = 0.0
 
     var gradePercentages: [(grade: String, count: Int, percent: Int)] {
@@ -81,114 +81,146 @@ struct AuthorityView: View {
     var body: some View {
         let statistics = ThemeAnalyzer.getThemeStatistics(from: reports, for: authority.name)
 
-
         VStack(spacing: 0){
             CustomHeaderVIew(title: authority.name)
-        ScrollView {
-            
-            Color.clear.frame(height: 20)
-            
-            VStack(spacing: 20) {
+            ScrollView {
+                Color.clear.frame(height: 20)
                 
-           
-                
-                // Grades Card
-                CustomCardView("Outcomes") {
-                    
-                    
-                    Chart(gradePercentages,  id: \.grade) { item in
-                        SectorMark(
-                            angle: .value("Count", Double(item.count) * animationPercent),
-                            innerRadius: 70,
-                            angularInset: 1
-                        )
-                        .cornerRadius(5)
-                        .foregroundStyle(getColor(for: item.grade))
-                    }
-                    .frame(height: 250)
-                    .onAppear {
-                        withAnimation(.linear(duration: 0.6)) {
-                                    animationPercent = 1.0
-                                }
-                            }
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(gradePercentages, id: \.grade) { item in
-                       
-                            HStack {
-                                
-                                Image(systemName: "largecircle.fill.circle")
-                                    .font(.body)
-                                    .foregroundStyle(getColor(for: item.grade))
-                                Text(item.grade)
-                                    .foregroundColor(.color4)
-                                Spacer()
-                                Text("\(item.percent)%")
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                    }
-                }
-                
-                
-            
-                
-                // Provision Types Card
-                CustomCardView("Provider Types") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(Array(authority.provisionTypes.keys.sorted()), id: \.self) { type in
-                            HStack {
-                                Text(type)
-                                Spacer()
-                                Text("\(authority.provisionTypes[type, default: 0])")
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                    }
-                }
-                
-                // Top Themes Card
-                CustomCardView("Most Common Themes") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(statistics.topThemes.prefix(10)) { theme in
-                            HStack {
-                                Text(theme.topic)
-                                Spacer()
-                                Text("\(theme.count)")
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                    }
-                }
-                
-                
-                CustomCardView("Inspectors") {
-                    VStack(alignment: .leading, spacing: 8) {
+                VStack(spacing: 20) {
+                    // Grades Card
+                    CustomCardView("Outcomes") {
                         
-                        ForEach(Array(authority.inspectors.sorted(by: { $0.key < $1.key })), id: \.key) { inspector, count in
-                            Button {
-                                path.append(.inspectorProfile(inspector))
-                            } label: {
+                        
+                        Chart(gradePercentages,  id: \.grade) { item in
+                            SectorMark(
+                                angle: .value("Count", Double(item.count) * animationPercent),
+                                innerRadius: 70,
+                                angularInset: 1
+                            )
+                            .cornerRadius(5)
+                            .foregroundStyle(getColor(for: item.grade))
+                        }
+                        .frame(height: 250)
+                        .onAppear {
+                            withAnimation(.linear(duration: 0.6)) {
+                                        animationPercent = 1.0
+                                    }
+                                }
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(gradePercentages, id: \.grade) { item in
+                           
                                 HStack {
-                                    Text(inspector)
+                                    
+                                    Image(systemName: "largecircle.fill.circle")
+                                        .font(.body)
+                                        .foregroundStyle(getColor(for: item.grade))
+                                    Text(item.grade)
+                                        .foregroundColor(.color4)
                                     Spacer()
-                                    Text("\(count)")
+                                    Text("\(item.percent)%")
                                         .foregroundColor(.gray)
                                 }
                             }
                         }
                     }
+                    
+                    
+                    
+                    // Add Analytics Navigation Button
+                    if let analytics = themeAnalytics {
+                        NavigationLink(destination:
+                            AuthorityThemeAnalyticsView(analytics: analytics, authorityName: authority.name)
+                        ) {
+                            CustomCardView("Themes",
+                                navigationLink: AnyView(
+                                    Image(systemName: "chevron.right.circle")
+                                        .font(.title2)
+                                        .foregroundColor(.color1)
+                                )) {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    HStack {
+                                        VStack(alignment: .leading) {
+                                            Text("\(statistics.topThemes.count)")
+                                                .font(.title)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.color1)
+                                            Text("View more details")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        Spacer()
+                                    }
+                                }
+                            }
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    } else {
+                        CustomCardView("Themes") {
+                            ProgressView()
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        }
+                    }
+                
+                    
+                    // Provision Types Card
+                    CustomCardView("Provider Types") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(Array(authority.provisionTypes.keys.sorted()), id: \.self) { type in
+                                HStack {
+                                    Text(type)
+                                    Spacer()
+                                    Text("\(authority.provisionTypes[type, default: 0])")
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                        }
+                    }
+                    
+//                    // Top Themes Card
+//                    CustomCardView("Most Common Themes") {
+//                        VStack(alignment: .leading, spacing: 8) {
+//                            ForEach(statistics.topThemes.prefix(10)) { theme in
+//                                HStack {
+//                                    Text(theme.topic)
+//                                    Spacer()
+//                                    Text("\(theme.count)")
+//                                        .foregroundColor(.gray)
+//                                }
+//                            }
+//                        }
+//                    }
+//                    
+                    
+                    CustomCardView("Inspectors") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            
+                            ForEach(Array(authority.inspectors.sorted(by: { $0.key < $1.key })), id: \.key) { inspector, count in
+                                Button {
+                                    path.append(.inspectorProfile(inspector))
+                                } label: {
+                                    HStack {
+                                        Text(inspector)
+                                        Spacer()
+                                        Text("\(count)")
+                                            .foregroundColor(.gray)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+       
                 }
+                .padding()
             }
-            .padding()
-        }
-        .scrollIndicators(.hidden)
+            .scrollIndicators(.hidden)
         
     }
-        .navigationBarHidden(true)
         .ignoresSafeArea()
-       
+        .navigationBarHidden(true)
+        .task {
+            themeAnalytics = await ThemeAnalyzer.getAuthorityThemeAnalytics(from: reports, for: authority.name)
+        }
     }
 }
-
-

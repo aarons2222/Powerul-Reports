@@ -94,9 +94,13 @@ struct ThemesView: View {
                     }
                 }
          
+                Color.clear
+                    .frame(height: 20)
             }
             .scrollIndicators(.hidden)
             .padding(.horizontal)
+            
+         
         }
         .ignoresSafeArea()
         .navigationBarHidden(true)
@@ -174,6 +178,10 @@ struct ThemeCardView: View {
                 }
                 .padding(.top, 8)
             }
+            
+            
+            
+   
         }
         .padding()
         .cardBackground()

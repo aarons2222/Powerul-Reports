@@ -133,6 +133,15 @@ extension ThemeAnalyzer {
         let totalReports: Int
     }
 
+    struct AuthorityThemeAnalytics {
+        let averageThemesPerReport: Double
+        let themeOutcomeCorrelations: [ThemeCorrelation]
+        let frequentThemes: [ThemeFrequencyStats]
+        let themesByProvisionType: [String: Int]
+        let inspectors: Set<String>
+        let totalReports: Int
+    }
+
     static func calculateInspectorThemeAnalytics(from allReports: [Report], for inspector: String) async -> InspectorThemeAnalytics {
         return await withCheckedContinuation { continuation in
             Task.detached(priority: .background) {
@@ -240,8 +249,120 @@ extension ThemeAnalyzer {
         }
     }
     
+    static func calculateAuthorityThemeAnalytics(from allReports: [Report], for authority: String) async -> AuthorityThemeAnalytics {
+        return await withCheckedContinuation { continuation in
+            Task.detached(priority: .background) {
+                let authorityReports = allReports.filter { $0.localAuthority == authority }
+                let totalReports = authorityReports.count
+                
+                // Track theme occurrences and their ratings
+                var themeReports: [String: Set<String>] = [:]
+                var themeRatings: [String: [(rating: String, reportId: String, inspector: String)]] = [:]
+                var themeInspectors: [String: Set<String>] = [:]
+                var themesByType: [String: [String: Int]] = [:]
+                
+                // Process reports in chunks to avoid UI freezes
+                let chunkSize = 5
+                for chunk in stride(from: 0, to: authorityReports.count, by: chunkSize) {
+                    let endIndex = min(chunk + chunkSize, authorityReports.count)
+                    let reportsChunk = authorityReports[chunk..<endIndex]
+                    
+                    for report in reportsChunk {
+                        // Track themes by provision type
+                        if themesByType[report.typeOfProvision] == nil {
+                            themesByType[report.typeOfProvision] = [:]
+                        }
+                        
+                        for theme in report.themes {
+                            // Get or create theme report IDs set
+                            if themeReports[theme.topic] == nil {
+                                themeReports[theme.topic] = Set<String>()
+                            }
+                            themeReports[theme.topic]?.insert(report.id)
+                            
+                            // Get or create theme ratings array
+                            if themeRatings[theme.topic] == nil {
+                                themeRatings[theme.topic] = []
+                            }
+                            
+                            // Add rating info
+                            let rating = report.ratings.first(where: { $0.category == "Overall effectiveness" })?.rating ?? report.outcome
+                            themeRatings[theme.topic]?.append((rating: rating, reportId: report.id, inspector: report.inspector))
+                            
+                            // Track inspectors
+                            if themeInspectors[theme.topic] == nil {
+                                themeInspectors[theme.topic] = Set<String>()
+                            }
+                            themeInspectors[theme.topic]?.insert(report.inspector)
+                            
+                            // Track themes by type
+                            themesByType[report.typeOfProvision]?[theme.topic, default: 0] += 1
+                        }
+                    }
+                }
+                
+                // Calculate correlations
+                var correlations: [ThemeCorrelation] = []
+                for (theme, reportIds) in themeReports {
+                    let percentage = (Double(reportIds.count) / Double(totalReports)) * 100
+                    let ratings = themeRatings[theme] ?? []
+                    let inspectors = Array(themeInspectors[theme] ?? Set())
+                    
+                    // Calculate most common rating
+                    var ratingCounts: [String: Int] = [:]
+                    for ratingReport in ratings {
+                        ratingCounts[ratingReport.rating, default: 0] += 1
+                    }
+                    let mostCommonRating = ratingCounts.max(by: { $0.value < $1.value })?.key ?? ""
+                    
+                    let correlation = ThemeCorrelation(
+                        theme: theme,
+                        percentage: percentage,
+                        outcome: mostCommonRating,
+                        ratingValue: RatingValue(rawValue: mostCommonRating) ?? .none,
+                        ratings: Array(Set(ratings.map { $0.rating })),
+                        ratingReports: ratings.map { ($0.rating, $0.reportId, $0.inspector) },
+                        locations: inspectors
+                    )
+                    correlations.append(correlation)
+                }
+                
+                // Sort correlations by percentage
+                correlations.sort { $0.percentage > $1.percentage }
+                
+                // Calculate frequent themes
+                let frequentThemes = themeReports.map { theme, reports in
+                    ThemeFrequencyStats(theme: theme, count: reports.count)
+                }.sorted { $0.count > $1.count }
+                
+                // Calculate average themes per report
+                let totalThemes = authorityReports.reduce(0) { $0 + $1.themes.count }
+                let averageThemes = Double(totalThemes) / Double(totalReports)
+                
+                let analytics = AuthorityThemeAnalytics(
+                    averageThemesPerReport: averageThemes,
+                    themeOutcomeCorrelations: correlations,
+                    frequentThemes: frequentThemes,
+                    themesByProvisionType: themesByType.mapValues { $0.count },
+                    inspectors: Set(authorityReports.map { $0.inspector }),
+                    totalReports: totalReports
+                )
+                
+                continuation.resume(returning: analytics)
+            }
+        }
+    }
+    
     static func calculateAverageThemeScore(correlations: [ThemeCorrelation]) -> Double {
         // TO DO: implement average theme score calculation
         return 0.0
+    }
+    
+    static func getInspectorThemeAnalytics(from reports: [Report], for inspector: String) async -> InspectorThemeAnalytics {
+        return await calculateInspectorThemeAnalytics(from: reports, for: inspector)
+    }
+    
+    static func getAuthorityThemeAnalytics(from reports: [Report], for authority: String) async -> AuthorityThemeAnalytics {
+        return await calculateAuthorityThemeAnalytics(from: reports, for: authority)
     }
 }

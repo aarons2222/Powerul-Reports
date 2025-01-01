@@ -54,6 +54,7 @@ struct LoginRegView: View {
     
     @State private var errorMessage: String = ""
     @State private var showToast: Bool = false
+    @State private var showVerificationToast: Bool = false
     @State private var toastMessage: String = ""
     @State private var passwordRequirements: [PasswordRequirement] = [
         PasswordRequirement(text: "At least 8 characters", isMet: false),
@@ -174,7 +175,7 @@ struct LoginRegView: View {
                                     }
                                 }
                                 .padding(.horizontal, 4)
-                                .padding(.vertical, 8)
+                                .padding(.bottom, 8)
                                 .animation(.easeInOut, value: password)
                             }
                         }
@@ -284,18 +285,7 @@ struct LoginRegView: View {
         .animation(.easeOut(duration: 0.16), value: keyboardHeight)
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .navigationBarHidden(true)
-        .toast(isPresented: $showToast, message: toastMessage)
-        .onAppear {
-            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
-                let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect ?? .zero
-                keyboardHeight = keyboardFrame.height
-            }
-            
-            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
-                keyboardHeight = 0
-            }
-        }
-        .onChange(of: authModel.isAuthenticated) {
+        .onChange(of: authModel.isAuthenticated) { newValue in
             if authModel.isAuthenticated {
                 focusedField = nil
             }
@@ -324,6 +314,8 @@ struct LoginRegView: View {
         .sheet(isPresented: $showPasswordReset) {
             PasswordResetView()
         }
+        .toast(isPresented: $showToast, message: toastMessage)
+        .toast(isPresented: $showVerificationToast, message: toastMessage, isError: false, duration: 3.0)
     }
     
     private func handleSignIn() {
@@ -373,23 +365,34 @@ struct LoginRegView: View {
     }
     
     private func handleSignUp() {
-        let emailTrimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        // Validate email
-        if emailTrimmed.isEmpty {
-            errorMessage = "Email is required"
-            return
+        Task{
+            let emailTrimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // Validate email
+            if emailTrimmed.isEmpty {
+                errorMessage = "Email is required"
+                return
+            }
+            
+            // Validate password
+            let validation = passwordValidation
+            if !validation.isValid {
+                errorMessage = validation.message
+                return
+            }
+            
+            let success = await authModel.signUp(email: email, password: password)
+            
+            if success {
+                toastMessage = "Verification code sent to \(email)"
+                withAnimation {
+                    showVerificationToast = true
+                }
+            }
         }
-        
-        // Validate password
-        let validation = passwordValidation
-        if !validation.isValid {
-            errorMessage = validation.message
-            return
-        }
-        
-        authModel.signUp(email: email, password: password)
     }
+    
+
     
     private func handleResetPassword() {
         let emailTrimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)

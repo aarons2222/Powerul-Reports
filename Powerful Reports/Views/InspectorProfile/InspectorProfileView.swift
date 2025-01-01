@@ -31,14 +31,20 @@ struct InspectorProfileView: View {
                         .foregroundColor(.color1)
                 }
             ) : nil) {
-            LazyVStack(spacing: 4) {
+                
+            VStack(spacing: 4) {
                 ForEach(Array(viewModel.recentReports.prefix(5))) { report in
                     Button {
                         path.append(.reportView(report))
                     } label: {
-                        ReportCard(report: report, showInspector: false)
+                        TestReportCard(report: report, showInspector: false)
                     }
-                    .padding(.vertical, 4)
+                   
+                    
+                    if report != viewModel.recentReports.prefix(5).last {
+                                       Divider()
+                                        .padding(.vertical, 10)
+                        }
                 }
             }
         }

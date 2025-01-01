@@ -180,36 +180,35 @@ class AuthenticationViewModel: ObservableObject {
         }
     }
     
-    func signUp(email: String, password: String) {
+    func signUp(email: String, password: String) async -> Bool {
         errorMessage = ""
         
-        Task {
-            do {
-                // Create user but don't set authentication state
-                let result = try await Auth.auth().createUser(withEmail: email, password: password)
-                
-                // Send verification email
-                try await result.user.sendEmailVerification()
-                
-                // Immediately sign out
-                try Auth.auth().signOut()
-                
-                await MainActor.run {
-                    // Show verification alert
-                    self.showVerificationAlert = true
-                    
-                    // Reset states
-                    self.user = nil
-                    self.isAuthenticated = false
-                    self.isEmailVerified = false
-                }
-            } catch {
-                await MainActor.run {
-                    handleAuthError(error)
-                }
+        do {
+            // Create user but don't set authentication state
+            let result = try await Auth.auth().createUser(withEmail: email, password: password)
+            
+            // Send verification email
+            try await result.user.sendEmailVerification()
+            
+            // Immediately sign out
+            try Auth.auth().signOut()
+            
+            // Reset states
+            await MainActor.run {
+                self.user = nil
+                self.isAuthenticated = false
+                self.isEmailVerified = false
             }
+            return true
+        } catch {
+            // Handle errors
+            await MainActor.run {
+                handleAuthError(error)
+            }
+            return false
         }
     }
+
     
     func resendVerificationEmail() async -> (success: Bool, message: String) {
         guard let currentUser = Auth.auth().currentUser else {
